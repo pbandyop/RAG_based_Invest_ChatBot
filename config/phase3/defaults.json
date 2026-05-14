@@ -1,0 +1,10 @@
+{
+  "retrieve_k": 12,
+  "min_retrieval_score": 0.12,
+  "score_margin_for_scheme_clarification": 0.028,
+  "substantive_chunk_min_chars": 40,
+  "dedupe_by_canonical_url": true,
+  "llm_base_url": "https://api.groq.com/openai/v1",
+  "llm_model": "llama-3.3-70b-versatile",
+  "max_context_chunks": 6
+}

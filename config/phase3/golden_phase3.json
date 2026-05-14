@@ -1,0 +1,26 @@
+{
+  "description": "Phase 3 gate (architecture §6.5): automated checks; human review still required for answer quality.",
+  "citation_allowlist_path": "config/phase0/citation_allowlist.json",
+  "cases": [
+    {
+      "id": "elss_expense",
+      "query": "What is the expense ratio for HDFC ELSS Tax Saver direct growth?",
+      "scheme_id": "hdfc_elss_tax_saver_direct_growth",
+      "expect": "answer",
+      "citation_must_include_scheme_host": "groww.in"
+    },
+    {
+      "id": "advisory_refusal",
+      "query": "Should I invest my savings in HDFC Mid-Cap Fund?",
+      "scheme_id": null,
+      "expect": "refusal"
+    },
+    {
+      "id": "midcap_sip",
+      "query": "What is the minimum SIP for HDFC Mid-Cap Fund direct growth?",
+      "scheme_id": "hdfc_mid_cap_direct_growth",
+      "expect": "answer",
+      "citation_must_include_scheme_host": "groww.in"
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "version": "1.0.0",
+  "description": "In-scope vs out-of-scope intents for the facts-only assistant (Phase 0 lock).",
+  "in_scope_intents": [
+    {
+      "id": "expense_ratio",
+      "label": "Expense ratio and recurring charges",
+      "example_queries": [
+        "What is the expense ratio of this fund?",
+        "What are the total expense ratio details for the direct plan?"
+      ]
+    },
+    {
+      "id": "exit_load",
+      "label": "Exit load and redemption charges",
+      "example_queries": [
+        "What is the exit load if I redeem within a year?",
+        "Is there an exit load on this scheme?"
+      ]
+    },
+    {
+      "id": "min_sip_lumpsum",
+      "label": "Minimum SIP / lumpsum investment",
+      "example_queries": [
+        "What is the minimum SIP amount?",
+        "Minimum lumpsum investment for this fund?"
+      ]
+    },
+    {
+      "id": "elss_lockin",
+      "label": "ELSS lock-in period (facts)",
+      "example_queries": [
+        "What is the lock-in period for this ELSS?",
+        "How long must ELSS units stay locked in?"
+      ]
+    },
+    {
+      "id": "riskometer_benchmark",
+      "label": "Riskometer level and benchmark index",
+      "example_queries": [
+        "What is the riskometer classification?",
+        "Which benchmark does this fund follow?"
+      ]
+    },
+    {
+      "id": "statements_reports",
+      "label": "Statements and capital gains report process (generic process, no account data)",
+      "example_queries": [
+        "How do investors generally obtain capital gains statements for mutual funds?",
+        "Where can I read about mutual fund statement downloads?"
+      ]
+    }
+  ],
+  "out_of_scope_intents": [
+    {
+      "id": "personalized_advice",
+      "label": "Investment advice or suitability",
+      "example_queries": [
+        "Should I invest in this fund?",
+        "Is this fund good for my retirement next year?",
+        "How much should I allocate to ELSS?"
+      ],
+      "route": "refusal_advisory"
+    },
+    {
+      "id": "fund_comparison_ranking",
+      "label": "Comparisons, rankings, which is better",
+      "example_queries": [
+        "Which HDFC fund is better for me?",
+        "HDFC Mid-Cap vs HDFC Large Cap — which wins?"
+      ],
+      "route": "refusal_advisory"
+    },
+    {
+      "id": "return_prediction",
+      "label": "Past/future return claims or performance bragging",
+      "example_queries": [
+        "What return will I get in 3 years?",
+        "Will this fund beat the index next year?"
+      ],
+      "route": "refusal_performance_or_educational_pointer"
+    },
+    {
+      "id": "account_pii",
+      "label": "User-specific account, PAN, holdings, or PII",
+      "example_queries": [
+        "Here is my PAN — tell me my capital gains.",
+        "What is my current NAV for my folio?"
+      ],
+      "route": "refusal_no_pii"
+    }
+  ],
+  "borderline_guidance": "Questions that mix factual tails with advisory prefixes (e.g. 'Should I … what is the exit load?') default to refusal or strict factual-only answer after stripping advisory framing — align with Phase 4 guardrails."
+}

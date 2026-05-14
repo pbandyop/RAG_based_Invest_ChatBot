@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "educational_links": {
+    "amfi_investor_corner": {
+      "label": "AMFI — investor corner",
+      "url": "https://www.amfiindia.com/investor-corner"
+    },
+    "sebi_investor_home": {
+      "label": "SEBI — investor website",
+      "url": "https://investor.sebi.gov.in/"
+    }
+  },
+  "templates": {
+    "refusal_advisory": {
+      "body": "This assistant only answers factual questions about mutual fund schemes from the pilot corpus. It does not provide investment advice, recommendations, or fund comparisons. For general investor education, see the link below.",
+      "educational_link_key": "amfi_investor_corner"
+    },
+    "refusal_performance_or_educational_pointer": {
+      "body": "This assistant does not predict returns, rank funds, or compare past performance in prose. For factual scheme attributes, ask about expense ratio, exit load, minimums, benchmark, or risk labels. For educational reading, use the link below.",
+      "educational_link_key": "sebi_investor_home"
+    },
+    "refusal_no_pii": {
+      "body": "Do not share PAN, Aadhaar, account numbers, OTPs, email, or phone numbers. This assistant does not process personal identifiers or account-specific data and does not provide web links in this situation.",
+      "educational_link_key": "amfi_investor_corner"
+    },
+    "refusal_out_of_corpus": {
+      "body": "The assistant could not find enough supported information in the pilot corpus to answer reliably. It will not guess. No source link is provided for this response.",
+      "educational_link_key": "sebi_investor_home"
+    }
+  },
+  "ui_disclaimer_snippet": "Facts-only. No investment advice."
+}

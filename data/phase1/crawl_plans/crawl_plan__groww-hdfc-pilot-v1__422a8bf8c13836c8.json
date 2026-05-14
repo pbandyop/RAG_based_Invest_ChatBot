@@ -1,0 +1,124 @@
+{
+  "p1_subphase": "P1-S1",
+  "run_id": "groww-hdfc-pilot-v1__422a8bf8c13836c8",
+  "plan_fingerprint_sha256": "422a8bf8c13836c88332d733c31267700c13e9b53047f5df719cf22ed537ca9d",
+  "generated_at_utc": "2026-05-14T18:48:24.939208+00:00",
+  "manifest_id": "groww-hdfc-pilot-v1",
+  "manifest_version": "1.0.0",
+  "manifest_path_note": "bind from config/phase0/manifest.json at generation time",
+  "url_count": 7,
+  "urls": [
+    {
+      "url": "https://groww.in/mutual-funds/hdfc-elss-tax-saver-fund-direct-plan-growth",
+      "document_type": "groww_scheme_page",
+      "scheme_id": "hdfc_elss_tax_saver_direct_growth",
+      "scheme_display_name": "HDFC TaxSaver (ELSS) Direct Growth",
+      "diversity_role": "elss",
+      "priority": 1,
+      "allowed_use": [
+        "ingest",
+        "retrieve",
+        "cite"
+      ],
+      "citable": true,
+      "included_in_crawl": true,
+      "canonical_url": "https://groww.in/mutual-funds/hdfc-elss-tax-saver-fund-direct-plan-growth"
+    },
+    {
+      "url": "https://groww.in/mutual-funds/hdfc-equity-fund-direct-growth",
+      "document_type": "groww_scheme_page",
+      "scheme_id": "hdfc_equity_direct_growth",
+      "scheme_display_name": "HDFC Equity Fund Direct Growth",
+      "diversity_role": "diversified_equity",
+      "priority": 1,
+      "allowed_use": [
+        "ingest",
+        "retrieve",
+        "cite"
+      ],
+      "citable": true,
+      "included_in_crawl": true,
+      "canonical_url": "https://groww.in/mutual-funds/hdfc-equity-fund-direct-growth"
+    },
+    {
+      "url": "https://groww.in/mutual-funds/hdfc-focused-fund-direct-growth",
+      "document_type": "groww_scheme_page",
+      "scheme_id": "hdfc_focused_direct_growth",
+      "scheme_display_name": "HDFC Focused Fund Direct Growth",
+      "diversity_role": "focused",
+      "priority": 1,
+      "allowed_use": [
+        "ingest",
+        "retrieve",
+        "cite"
+      ],
+      "citable": true,
+      "included_in_crawl": true,
+      "canonical_url": "https://groww.in/mutual-funds/hdfc-focused-fund-direct-growth"
+    },
+    {
+      "url": "https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth",
+      "document_type": "groww_scheme_page",
+      "scheme_id": "hdfc_large_cap_direct_growth",
+      "scheme_display_name": "HDFC Large Cap Fund Direct Growth",
+      "diversity_role": "large_cap",
+      "priority": 1,
+      "allowed_use": [
+        "ingest",
+        "retrieve",
+        "cite"
+      ],
+      "citable": true,
+      "included_in_crawl": true,
+      "canonical_url": "https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth"
+    },
+    {
+      "url": "https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth",
+      "document_type": "groww_scheme_page",
+      "scheme_id": "hdfc_mid_cap_direct_growth",
+      "scheme_display_name": "HDFC Mid-Cap Fund Direct Growth",
+      "diversity_role": "mid_cap",
+      "priority": 1,
+      "allowed_use": [
+        "ingest",
+        "retrieve",
+        "cite"
+      ],
+      "citable": true,
+      "included_in_crawl": true,
+      "canonical_url": "https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth"
+    },
+    {
+      "url": "https://groww.in/help/mutual-funds",
+      "document_type": "groww_help",
+      "scheme_id": null,
+      "scheme_display_name": null,
+      "diversity_role": null,
+      "priority": 2,
+      "allowed_use": [
+        "ingest",
+        "retrieve"
+      ],
+      "citable": false,
+      "included_in_crawl": true,
+      "notes": "Verify URL still valid before production crawl; disable if 404.",
+      "canonical_url": "https://groww.in/help/mutual-funds"
+    },
+    {
+      "url": "https://groww.in/mutual-funds",
+      "document_type": "groww_product_hub",
+      "scheme_id": null,
+      "scheme_display_name": null,
+      "diversity_role": null,
+      "priority": 2,
+      "allowed_use": [
+        "ingest",
+        "retrieve"
+      ],
+      "citable": false,
+      "included_in_crawl": true,
+      "notes": "Corpus enrichment only; never use as factual citation_url (pilot 1.1).",
+      "canonical_url": "https://groww.in/mutual-funds"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+# Phase 1 artifacts (raw bytes + run reports + normalized JSON)
+data/phase1/raw/**
+!data/phase1/raw/.gitkeep
+data/phase1/runs/**
+!data/phase1/runs/.gitkeep
+data/phase1/normalized/**
+!data/phase1/normalized/.gitkeep
+data/phase2/chunks/*
+!data/phase2/chunks/.gitkeep
+data/phase2/index/**
+!data/phase2/index/.gitkeep
+# Python
+__pycache__/
+*.py[cod]
+.Python
+.venv/
+venv/
+.env
+.env.*
+
+# OS
+Thumbs.db
+.DS_Store

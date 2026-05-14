@@ -1,0 +1,12 @@
+# Phase 2 — embeddings + vector index (CPU-friendly pilot)
+sentence-transformers>=3.0.0
+faiss-cpu>=1.8.0
+numpy>=1.26.0
+
+# Phase 3 — Groq (OpenAI-compatible Chat Completions); extractive fallback if GROQ_API_KEY unset
+openai>=1.30.0
+python-dotenv>=1.0.0
+
+# Phase 6 — Query HTTP API (architecture §9.1)
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0

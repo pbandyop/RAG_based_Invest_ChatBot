@@ -1,0 +1,17 @@
+{
+  "description": "Smoke queries for Phase 2 gate (architecture §5.4). Human review still required.",
+  "queries": [
+    {
+      "query": "What is the expense ratio for HDFC ELSS Tax Saver direct growth?",
+      "k": 5
+    },
+    {
+      "query": "minimum SIP amount HDFC mid cap fund",
+      "k": 5
+    },
+    {
+      "query": "exit load HDFC large cap fund direct growth",
+      "k": 5
+    }
+  ]
+}

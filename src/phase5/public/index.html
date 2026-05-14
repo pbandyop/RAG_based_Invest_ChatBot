@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HDFC MF FAQ — pilot (facts-only)</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <h1>Mutual fund FAQ — pilot</h1>
+      <p class="subtitle">HDFC schemes on Groww (corpus) · facts-only answers</p>
+    </header>
+
+    <aside class="disclaimer-sticky" id="disclaimer-bar" role="note" aria-live="polite">
+      <span id="disclaimer-text">Loading…</span>
+    </aside>
+
+    <main class="main">
+      <section class="welcome" aria-labelledby="welcome-heading">
+        <h2 id="welcome-heading">How this assistant works</h2>
+        <p>
+          This pilot answers <strong>factual</strong> questions about a small set of
+          <strong>HDFC Mutual Fund</strong> schemes using text retrieved from official
+          <strong>Groww</strong> scheme pages. It does <strong>not</strong> give investment advice,
+          rankings, or return predictions. Each successful answer includes one Groww link and a
+          “last updated” line from our crawl.
+        </p>
+      </section>
+
+      <section class="examples" aria-labelledby="examples-heading">
+        <h2 id="examples-heading">Try an example</h2>
+        <p class="hint">Choosing a scheme first improves accuracy.</p>
+        <div class="example-buttons" role="group" aria-label="Example questions">
+          <button type="button" class="btn-example" data-query="What is the expense ratio for this scheme?" data-scheme="hdfc_elss_tax_saver_direct_growth">
+            ELSS — expense ratio
+          </button>
+          <button type="button" class="btn-example" data-query="What is the minimum SIP amount for this fund?" data-scheme="hdfc_mid_cap_direct_growth">
+            Mid-cap — minimum SIP
+          </button>
+          <button type="button" class="btn-example" data-query="What is the exit load for this scheme?" data-scheme="hdfc_large_cap_direct_growth">
+            Large-cap — exit load
+          </button>
+        </div>
+      </section>
+
+      <section class="query-panel" aria-labelledby="ask-heading">
+        <h2 id="ask-heading">Ask a question</h2>
+        <form id="query-form" novalidate>
+          <label for="scheme-select">Scheme</label>
+          <select id="scheme-select" name="scheme_id" aria-describedby="scheme-help">
+            <option value="">— Select scheme (recommended) —</option>
+          </select>
+          <p id="scheme-help" class="field-help">Pick the fund your question is about.</p>
+
+          <label for="question-input">Your question</label>
+          <textarea
+            id="question-input"
+            name="query"
+            rows="4"
+            maxlength="4000"
+            required
+            placeholder="e.g. What is the benchmark for this fund?"
+            autocomplete="off"
+          ></textarea>
+          <p class="field-help">Do not paste PAN, Aadhaar, account numbers, or OTPs.</p>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" id="submit-btn">Get answer</button>
+            <span class="status" id="status" aria-live="polite"></span>
+          </div>
+        </form>
+      </section>
+
+      <section class="result" id="result-section" hidden aria-live="polite">
+        <h2>Response</h2>
+        <div id="result-body" class="result-body"></div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>Pilot corpus: Groww.in · Citations are Groww scheme pages only.</p>
+    </footer>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>

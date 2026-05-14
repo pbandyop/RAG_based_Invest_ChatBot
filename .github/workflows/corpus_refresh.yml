@@ -1,0 +1,60 @@
+# Scheduled + manual corpus refresh: Phase 1 (P1-S6 = S1→S5) + Phase 2 index build.
+# See docs/phase-wise-architecture.md §9.5.
+name: Corpus refresh
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly, Sunday 05:15 UTC — adjust cadence per robots / policy (architecture §9.5).
+    - cron: "15 5 * * 0"
+
+concurrency:
+  group: corpus-refresh-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ingest-and-index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PYTHONPATH: src
+      # Optional: HF_TOKEN secret for higher Hub rate limits when downloading embedding weights.
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate Phase 0 config
+        run: python scripts/validate_phase0.py
+
+      - name: P1-S6 — manifest → raw → normalize → S5 flags (architecture §4.1)
+        run: python scripts/ingestion/phase1/run_s6_pipeline.py --overwrite
+
+      - name: Phase 2 — chunk, embed, FAISS index
+        run: python scripts/run_phase2_build_index.py --overwrite
+
+      - name: Upload Phase 2 index bundle (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-index-${{ github.run_id }}
+          path: data/phase2/index/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload run reports (optional, smaller)
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1-reports-${{ github.run_id }}
+          path: |
+            data/phase1/runs/
+            data/phase1/crawl_plans/
+          if-no-files-found: warn
+          retention-days: 14
