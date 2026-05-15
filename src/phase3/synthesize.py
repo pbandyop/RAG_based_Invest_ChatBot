@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
 
 from phase2.retrieve import SearchHit
+
+_log = logging.getLogger(__name__)
 
 _STOP = frozenset(
     "a an the is are was were be been being to of and or for in on at by it as if with this that "
@@ -33,10 +38,41 @@ def _is_plausible_sentence(p: str) -> bool:
     ratio = letters / max(len(p), 1)
     if ratio > 0.40:
         return True
-    # Groww NAV / scheme AUM rows are digit-heavy but factual (not JSON payloads).
+    # Groww NAV / scheme AUM / expense ratio rows can be digit-heavy but factual.
     if re.search(r"\bnav\s*:", low) or re.search(r"\bfund\s+size\s*\(\s*aum\s*\)", low) or re.search(r"\btotal\s+aum\b", low):
         return ratio > 0.16 and len(p) >= 20
+    if re.search(r"\b(expense\s+ratio|ter)\b", low) and re.search(r"\d[\d.,]*\s*%", p):
+        return ratio > 0.12 and len(p) >= 14
     return False
+
+
+def _extractive_priority_expense_ratio(blob: str, query: str) -> list[str]:
+    """Pull expense ratio / TER lines when the question asks for them (Groww crawl shape)."""
+    q = (query or "").lower()
+    if "expense" not in q or "ratio" not in q:
+        return []
+    out: list[str] = []
+    # Groww inserts spaces inside decimals (``0. 75 %``); older ``[^.]`` patterns stopped at the dot.
+    for pat in (
+        r"\b(?:total\s+)?expense\s+ratio\s*:?\s+[\d\s.,]+%",
+        r"\blower\s+expense\s+ratio\s*:?\s+[\d\s.,]+%",
+        r"\bter\s*:?\s+[\d\s.,]+%",
+    ):
+        for m in re.finditer(pat, blob, re.IGNORECASE):
+            span = m.group(0)
+            if "expense _ ratio" in span:
+                continue
+            s = re.sub(r"\s+", " ", span).strip()
+            digits = re.sub(r"\s+", "", s)
+            if not re.search(r"\d", digits):
+                continue
+            if not s.endswith("."):
+                s += "."
+            if _is_plausible_sentence(s) and s not in out:
+                out.append(s)
+            if len(out) >= 3:
+                return out
+    return out
 
 
 def _extractive_priority_nav_aum(blob: str, query: str) -> list[str]:
@@ -63,6 +99,25 @@ def _extractive_priority_nav_aum(blob: str, query: str) -> list[str]:
             if not s.endswith("."):
                 s += "."
             out.append(s)
+    return out
+
+
+def _extractive_priority_fund_manager(blob: str, query: str) -> list[str]:
+    """Pull manager / bio lines when the question asks (Groww crawl shapes)."""
+    q = (query or "").lower()
+    if not re.search(r"\b(fund\s+management|fund\s+manager|who\s+manages)\b", q):
+        return []
+    out: list[str] = []
+    for pat in (
+        r"\b[^.]{10,520}\b(current\s+)?fund\s+manager\b[^.]{0,460}\.",
+        r"\b[^.]{20,620}also manages these schemes[^.]{0,560}\.",
+    ):
+        for m in re.finditer(pat, blob, re.IGNORECASE | re.DOTALL):
+            s = re.sub(r"\s+", " ", m.group(0)).strip()
+            if _is_plausible_sentence(s) and s not in out:
+                out.append(s)
+            if len(out) >= 3:
+                return out
     return out
 
 
@@ -107,7 +162,19 @@ def _extractive_from_contexts(query: str, contexts: list[str], max_sentences: in
     blob = _prepare_blob(contexts)
     picked: list[str] = []
 
+    for s in _extractive_priority_expense_ratio(blob, query):
+        if s and _is_plausible_sentence(s) and s not in picked:
+            picked.append(s)
+        if len(picked) >= max_sentences:
+            return " ".join(picked)
+
     for s in _extractive_priority_nav_aum(blob, query):
+        if s and _is_plausible_sentence(s) and s not in picked:
+            picked.append(s)
+        if len(picked) >= max_sentences:
+            return " ".join(picked)
+
+    for s in _extractive_priority_fund_manager(blob, query):
         if s and _is_plausible_sentence(s) and s not in picked:
             picked.append(s)
         if len(picked) >= max_sentences:
@@ -186,7 +253,69 @@ def _ensure_dotenv_loaded() -> None:
         from dotenv import load_dotenv
     except ImportError:
         return
-    load_dotenv(_REPO_ROOT / ".env")
+    # ``override=True``: a defined-but-empty ``GROQ_API_KEY`` in the process env must not
+    # block values from the repo-root ``.env`` (python-dotenv default is no override).
+    load_dotenv(_REPO_ROOT / ".env", override=True)
+
+
+def _normalize_groq_api_key() -> str | None:
+    """Return stripped API key from the environment after loading repo ``.env``."""
+    _ensure_dotenv_loaded()
+    raw = (os.environ.get("GROQ_API_KEY") or "").strip()
+    if raw.startswith("\ufeff"):
+        raw = raw.lstrip("\ufeff")
+    if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in "\"'":
+        raw = raw[1:-1].strip()
+    return raw or None
+
+
+def _groq_chat_completions_http(
+    *,
+    api_key: str,
+    base_url: str,
+    model: str,
+    messages: list[dict[str, str]],
+    json_object_mode: bool,
+) -> str:
+    """OpenAI-compatible ``/v1/chat/completions`` POST (stdlib only; no ``openai`` package)."""
+    url = base_url.rstrip("/") + "/chat/completions"
+    payload: dict[str, Any] = {
+        "model": model,
+        "temperature": 0.1,
+        "messages": messages,
+    }
+    if json_object_mode:
+        payload["response_format"] = {"type": "json_object"}
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            # Groq is behind Cloudflare; the default ``Python-urllib/x.y`` UA is often blocked (HTTP 403).
+            "User-Agent": "OpenAI/Python 1.0 (NextLeapGroww/phase3; +https://github.com/pbandyop/RAG_based_Invest_ChatBot)",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            body = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", errors="replace")[:800]
+        _log.warning("Groq HTTP %s %s: %s", e.code, url, detail)
+        raise
+    choices = body.get("choices") or []
+    if not choices:
+        raise ValueError("Groq response missing choices")
+    msg = (choices[0].get("message") or {}) if isinstance(choices[0], dict) else {}
+    return str(msg.get("content") or "").strip()
+
+
+def groq_api_configured() -> bool:
+    """True when a Groq API key is available (env or repo-root ``.env`` via dotenv)."""
+    return _normalize_groq_api_key() is not None
 
 
 def try_groq_json_answer(
@@ -206,27 +335,32 @@ def try_groq_json_answer(
     optional ``base_url`` defaults to Groq's OpenAI-compatible endpoint.
     """
     _ensure_dotenv_loaded()
-    key = os.environ.get("GROQ_API_KEY")
+    key = _normalize_groq_api_key()
     if not key:
         return None
     try:
         from openai import OpenAI
     except ImportError:
-        return None
+        OpenAI = None  # type: ignore[misc, assignment]
 
     endpoint = (base_url or "").strip() or _GROQ_OPENAI_COMPAT_BASE
-    client = OpenAI(api_key=key, base_url=endpoint)
     allow_bullets = "\n".join(f"- {u}" for u in allowlist_urls)
     evidence = "\n\n---\n\n".join(evidence_blocks[:8])
     system = (
-        "You are a facts-only mutual fund FAQ assistant for a pilot corpus. "
-        "Use ONLY the evidence excerpts. Do not give investment advice, fund comparisons, rankings, "
-        "or predictions. Do not fabricate past returns, CAGR, or performance narratives; if the user asks about performance, "
-        "answer only with neutral factual attributes present in evidence (e.g. expense ratio). "
-        "When the evidence explicitly states snapshot NAV (net asset value) or scheme-level fund size (AUM in ₹ cr), "
-        "include those figures in the answer — they are factual attributes, not return claims. "
-        "Otherwise say evidence is insufficient. "
-        "Do not repeat promotional or suitability language from the source. "
+        "You are a facts-only mutual fund FAQ assistant (RAG). Your only source is the EVIDENCE block below — "
+        "plain text and embedded JSON fragments from a fixed crawl. Do not use outside knowledge, the open web, "
+        "or guesses. Do not give investment advice, fund comparisons, rankings, or predictions. "
+        "Do not invent numbers, dates, names, or policies. "
+        "If the USER_QUESTION asks about past returns, CAGR, or performance stories, only repeat neutral factual "
+        "lines that literally appear in EVIDENCE (e.g. stated ratios or labels); never fabricate performance. "
+        "Answer policy: Read the USER_QUESTION and decide what factual information is being requested. "
+        "If one or more EVIDENCE excerpts clearly contain that information (including facts buried inside JSON-like "
+        "strings, manager names, AMC lines, NAV, AUM, fees, loads, lock-in, registrar, etc.), answer in at most "
+        "three short neutral sentences using only those supported facts. "
+        "If the requested information does not appear in any excerpt (or only appears in a way you cannot state "
+        "faithfully without adding unsupported detail), respond with a single sentence that the evidence is "
+        "insufficient — e.g. that the retrieved corpus does not contain enough to answer. "
+        "Do not copy long marketing or suitability wording from the source. "
         "Output a single JSON object with keys: "
         "answer (string, at most 3 short sentences), "
         "citation_url (exactly one string copied verbatim from the allowlist), "
@@ -241,17 +375,89 @@ def try_groq_json_answer(
     if extra_user_instructions:
         user += f"\nADDITIONAL_INSTRUCTIONS:\n{extra_user_instructions}\n"
 
-    resp = client.chat.completions.create(
-        model=model,
-        temperature=0.1,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-    )
-    raw = (resp.choices[0].message.content or "").strip()
+    messages: list[dict[str, str]] = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ]
+
+    raw = ""
+    if OpenAI is not None:
+        try:
+            client = OpenAI(api_key=key, base_url=endpoint)
+            _log.info("Groq chat.completions (openai SDK) model=%s endpoint=%s", model, endpoint)
+            resp = client.chat.completions.create(
+                model=model,
+                temperature=0.1,
+                response_format={"type": "json_object"},
+                messages=messages,
+            )
+            raw = (resp.choices[0].message.content or "").strip()
+        except Exception as e:
+            _log.warning("Groq OpenAI SDK failed (%s): %s; falling back to HTTP", type(e).__name__, e)
+
+    if not raw:
+        try:
+            _log.info("Groq chat.completions (urllib HTTP) model=%s endpoint=%s", model, endpoint)
+            raw = _groq_chat_completions_http(
+                api_key=key,
+                base_url=endpoint,
+                model=model,
+                messages=messages,
+                json_object_mode=True,
+            )
+        except Exception as e:
+            _log.warning("Groq HTTP chat.completions failed (%s): %s", type(e).__name__, e)
+            return None
+
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
-        return None
+        pass
+
+    # Model occasionally returns JSON wrapped in fences or prose; retry once without json_object mode.
+    raw_retry = ""
+    if OpenAI is not None:
+        try:
+            client = OpenAI(api_key=key, base_url=endpoint)
+            _log.info("Groq retry without json_object mode (openai SDK) model=%s", model)
+            resp = client.chat.completions.create(
+                model=model,
+                temperature=0.1,
+                messages=messages
+                + [
+                    {
+                        "role": "user",
+                        "content": "Your previous reply was not valid JSON. Reply with ONE raw JSON object only, same keys as before.",
+                    }
+                ],
+            )
+            raw_retry = (resp.choices[0].message.content or "").strip()
+        except Exception as e:
+            _log.warning("Groq JSON retry (SDK) failed (%s): %s", type(e).__name__, e)
+    if not raw_retry:
+        try:
+            _log.info("Groq retry without json_object mode (urllib HTTP) model=%s", model)
+            raw_retry = _groq_chat_completions_http(
+                api_key=key,
+                base_url=endpoint,
+                model=model,
+                messages=messages
+                + [
+                    {
+                        "role": "user",
+                        "content": "Your previous reply was not valid JSON. Reply with ONE raw JSON object only, same keys as before.",
+                    }
+                ],
+                json_object_mode=False,
+            )
+        except Exception as e:
+            _log.warning("Groq JSON retry (HTTP) failed (%s): %s", type(e).__name__, e)
+            raw_retry = ""
+    if raw_retry:
+        try:
+            return json.loads(raw_retry)
+        except json.JSONDecodeError:
+            _log.warning("Groq returned non-JSON after retry; first 240 chars: %s", raw_retry[:240])
+    else:
+        _log.warning("Groq returned non-JSON; first 240 chars: %s", raw[:240])
+    return None

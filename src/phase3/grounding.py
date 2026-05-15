@@ -26,13 +26,14 @@ def prefer_fact_span(answer: str, query: str) -> str:
     if not a:
         return a
     if "expense" in q and "ratio" in q:
-        m = re.search(
-            r"([^.]{0,160}expense\s+ratio[^.]{0,220}\d[\d.,]*\s*%[^.]{0,120}\.)",
-            a,
-            re.IGNORECASE | re.DOTALL,
-        )
-        if m:
-            return re.sub(r"\s+", " ", m.group(1)).strip()
+        for pat in (
+            r"([^.]{0,200}total\s+expense\s+ratio[^.]{0,360}\d[\d.,]*\s*%[^.]{0,160}\.)",
+            r"([^.]{0,200}expense\s+ratio[^.]{0,380}\d[\d.,]*\s*%[^.]{0,160}\.)",
+            r"([^.]{0,200}\bter\b[^.]{0,280}\d[\d.,]*\s*%[^.]{0,160}\.)",
+        ):
+            m = re.search(pat, a, re.IGNORECASE | re.DOTALL)
+            if m:
+                return re.sub(r"\s+", " ", m.group(1)).strip()
     if "exit" in q and "load" in q:
         m = re.search(r"([^.]{0,120}exit\s+load[^.]{0,320}\.)", a, re.IGNORECASE | re.DOTALL)
         if m:
@@ -57,6 +58,14 @@ def prefer_fact_span(answer: str, query: str) -> str:
             r"(\bfund\s+size\s*\(\s*aum\s*\)\s*₹[\d,\s\.]+\s*cr\b\.?)",
             a,
             re.IGNORECASE,
+        )
+        if m:
+            return re.sub(r"\s+", " ", m.group(1)).strip()
+    if re.search(r"\b(fund\s+management|fund\s+manager|who\s+manages)\b", q):
+        m = re.search(
+            r"([^.]{0,100}\b(current\s+)?fund\s+manager\b[^.]{0,480}\.)",
+            a,
+            re.IGNORECASE | re.DOTALL,
         )
         if m:
             return re.sub(r"\s+", " ", m.group(1)).strip()

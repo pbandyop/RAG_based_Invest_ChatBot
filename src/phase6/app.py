@@ -17,8 +17,16 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from phase3.engine import FaqRagEngine
 from phase6.paths import repo_root, resolve_phase2_index_dir
+
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(repo_root() / ".env", override=True)
+except ImportError:
+    pass
+
+from phase3.engine import FaqRagEngine
 
 logger = logging.getLogger("phase6.api")
 

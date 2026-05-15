@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -11,16 +12,26 @@ from phase3.query_guard import GuardResult, evaluate_query_guard
 from phase3.retrieval_utils import (
     dedupe_hits_by_source_url,
     hit_evidence_record,
+    infer_scheme_id_from_query,
     load_phase3_defaults,
     max_fetched_at_iso,
+    merge_manager_anchor_hits,
     merge_stat_anchor_hits,
+    prioritize_hero_stat_chunks,
+    same_scheme_manager_fallback,
     same_scheme_stat_fallback,
     scheme_clarification_needed,
     substantive_hits,
 )
-from phase3.synthesize import contexts_from_hits, try_groq_json_answer, _extractive_from_contexts
+from phase3.synthesize import (
+    _extractive_from_contexts,
+    contexts_from_hits,
+    groq_api_configured,
+    try_groq_json_answer,
+)
 from phase3.url_normalize import normalize_citation_url
 
+_log = logging.getLogger(__name__)
 
 # Refusal classes: no user-visible URLs (architecture §1.1 — unsupported / PII).
 _REFUSAL_NO_URL_TEMPLATES = frozenset({"refusal_out_of_corpus", "refusal_no_pii"})
@@ -100,11 +111,22 @@ class FaqRagEngine:
         max_ctx = int(self.defaults.get("max_context_chunks", 6))
         dedupe = bool(self.defaults.get("dedupe_by_canonical_url", True))
 
+        explicit_sid = (scheme_id or "").strip()
+        inferred_sid = infer_scheme_id_from_query(query, self.p0.schemes) if not explicit_sid else None
+        effective_sid = explicit_sid or (inferred_sid or "")
+
         raw_hits = self.bundle.search(query, k=k)
-        ranked = dedupe_hits_by_source_url(raw_hits) if dedupe else list(raw_hits)
+        # URL-level dedupe keeps one chunk per Groww page — fine when the question is open-ended
+        # across schemes. When a scheme is already resolved, every on-page chunk shares the same
+        # canonical URL; deduping then collapses the whole scheme to a single excerpt (often NAV
+        # chrome) and hides fund-manager / SID / registrar blocks the LLM needs.
+        if dedupe and not effective_sid:
+            ranked = dedupe_hits_by_source_url(raw_hits)
+        else:
+            ranked = list(raw_hits)
         scores = [h.score for h in ranked[:5]]
         hits = substantive_hits(ranked, min_chars=min_chars)
-        sid_filter = (scheme_id or "").strip()
+        sid_filter = effective_sid
         if sid_filter:
             matching = [h for h in hits if str(h.metadata.get("scheme_id") or "") == sid_filter]
             if not matching:
@@ -112,8 +134,14 @@ class FaqRagEngine:
                     self.bundle, sid_filter, query, min_chars=min_chars
                 )
             if not matching:
+                matching = same_scheme_manager_fallback(
+                    self.bundle, sid_filter, query, min_chars=min_chars
+                )
+            if not matching:
                 return self._refusal("refusal_out_of_corpus")
             hits = merge_stat_anchor_hits(self.bundle, matching, sid_filter, query)
+            hits = merge_manager_anchor_hits(self.bundle, hits, sid_filter, query)
+            hits = prioritize_hero_stat_chunks(hits, query)
 
         if not hits or hits[0].score < min_score:
             return self._refusal("refusal_out_of_corpus")
@@ -121,7 +149,8 @@ class FaqRagEngine:
         need_clar, clar_msg = scheme_clarification_needed(hits, margin=margin)
         ev_pre = [hit_evidence_record(h) for h in hits[:max_ctx]]
         lu_pre = max_fetched_at_iso(hits[:max_ctx])
-        if need_clar and not (scheme_id and scheme_id.strip()):
+        scheme_resolved = bool(explicit_sid) or bool(inferred_sid)
+        if need_clar and not scheme_resolved:
             return Phase3Response(
                 refusal=False,
                 answer=clar_msg or "",
@@ -179,13 +208,45 @@ class FaqRagEngine:
             )
             evidence_blocks.append(f"[{meta}]\n{h.text}")
 
-        llm_obj = try_groq_json_answer(
-            query=query,
-            evidence_blocks=evidence_blocks,
-            allowlist_urls=allow_list,
-            model=model,
-            base_url=llm_base_url,
-        )
+        try:
+            from dotenv import load_dotenv
+
+            load_dotenv(self.repo_root / ".env", override=True)
+        except ImportError:
+            pass
+
+        use_groq = groq_api_configured()
+        llm_obj: dict[str, Any] | None = None
+        if use_groq:
+            _log.info(
+                "phase3_synthesize groq=1 model=%s evidence_blocks=%d",
+                model,
+                len(evidence_blocks),
+            )
+            groq_retry_hints: list[str | None] = [
+                None,
+                "Return exactly one JSON object with keys answer, citation_url, scheme_id. "
+                "citation_url must be copied verbatim from the allowlist block (one line). "
+                "answer: at most 3 short neutral sentences, facts from EVIDENCE only.",
+                "Your response must be valid JSON only (no prose outside the object). "
+                "If unsure, pick the allowlist URL closest to the top evidence chunk.",
+            ]
+            for hint in groq_retry_hints:
+                llm_obj = try_groq_json_answer(
+                    query=query,
+                    evidence_blocks=evidence_blocks,
+                    allowlist_urls=allow_list,
+                    model=model,
+                    base_url=llm_base_url,
+                    extra_user_instructions=hint,
+                )
+                if isinstance(llm_obj, dict) and str(llm_obj.get("answer") or "").strip():
+                    break
+                llm_obj = None
+
+        else:
+            _log.info("phase3_synthesize groq=0 (no GROQ_API_KEY in .env / environment after dotenv)")
+
         if isinstance(llm_obj, dict) and llm_obj.get("answer"):
             answer_text, citation_url, sid = self._apply_llm_dict(llm_obj, citation_url=citation_url, sid=sid)
             route = "groq"
@@ -234,20 +295,54 @@ class FaqRagEngine:
                 route = "groq_retry"
 
         if not ok:
-            if route.startswith("groq") and reason != "forbidden_phrase":
-                answer_text = _extractive_from_contexts(query, contexts)
-                answer_text = truncate_to_max_sentences(answer_text, 3)
-                answer_text = polish_answer_text(answer_text)
-                answer_text = prefer_fact_span(answer_text, query)
-                ok2, _ = grounding_ok(
-                    answer=answer_text,
-                    citation_url=citation_url,
-                    allowlist=self.p0.citation_urls_normalized,
-                    scheme_id=sid if sid in self.p0.scheme_id_to_citation else None,
-                    scheme_id_to_citation=self.p0.scheme_id_to_citation,
+            if use_groq and route.startswith("groq") and reason != "forbidden_phrase":
+                grounding_hints = (
+                    "The previous answer failed automated grounding (citation / allowlist / scheme consistency). "
+                    "Return a NEW JSON object. citation_url must be one allowlist string copied exactly. "
+                    "answer: at most 3 neutral sentences supported only by EVIDENCE; no invented figures.",
+                    "Grounding still failed. Use only facts verbatim or clearly paraphrased from EVIDENCE; "
+                    "citation_url must match the scheme's official Groww page from the allowlist.",
                 )
-                ok = ok2
-                route = "extractive_fallback"
+                for gi, ghint in enumerate(grounding_hints):
+                    llm_fix = try_groq_json_answer(
+                        query=query,
+                        evidence_blocks=evidence_blocks,
+                        allowlist_urls=allow_list,
+                        model=model,
+                        base_url=llm_base_url,
+                        extra_user_instructions=f"{ghint} Failure detail: {reason!s}.",
+                    )
+                    if isinstance(llm_fix, dict) and llm_fix.get("answer"):
+                        answer_text, citation_url, sid = self._apply_llm_dict(
+                            llm_fix, citation_url=citation_url, sid=sid
+                        )
+                        answer_text = truncate_to_max_sentences(answer_text, 3)
+                        answer_text = polish_answer_text(answer_text)
+                        answer_text = prefer_fact_span(answer_text, query)
+                        ok, reason = grounding_ok(
+                            answer=answer_text,
+                            citation_url=citation_url,
+                            allowlist=self.p0.citation_urls_normalized,
+                            scheme_id=sid if sid in self.p0.scheme_id_to_citation else None,
+                            scheme_id_to_citation=self.p0.scheme_id_to_citation,
+                        )
+                        route = "groq_grounding_retry" if gi == 0 else "groq_grounding_retry2"
+                        if ok:
+                            break
+                if not ok:
+                    answer_text = _extractive_from_contexts(query, contexts)
+                    answer_text = truncate_to_max_sentences(answer_text, 3)
+                    answer_text = polish_answer_text(answer_text)
+                    answer_text = prefer_fact_span(answer_text, query)
+                    ok2, _ = grounding_ok(
+                        answer=answer_text,
+                        citation_url=citation_url,
+                        allowlist=self.p0.citation_urls_normalized,
+                        scheme_id=sid if sid in self.p0.scheme_id_to_citation else None,
+                        scheme_id_to_citation=self.p0.scheme_id_to_citation,
+                    )
+                    ok = ok2
+                    route = "extractive_fallback"
 
         if not ok:
             return self._refusal("refusal_out_of_corpus")

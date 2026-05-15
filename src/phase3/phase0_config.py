@@ -13,6 +13,7 @@ class Phase0RuntimeConfig:
     citation_urls_normalized: set[str]
     scheme_id_to_citation: dict[str, str]
     refusal_config: dict[str, Any]
+    schemes: list[dict[str, Any]]  # rows from config/phase0/schemes.json
 
 
 def load_phase0_runtime(repo_root: Path) -> Phase0RuntimeConfig:
@@ -36,8 +37,11 @@ def load_phase0_runtime(repo_root: Path) -> Phase0RuntimeConfig:
         if sid and cu:
             sid_map[sid] = cu
 
+    scheme_rows: list[dict[str, Any]] = list(schemes_doc.get("schemes") or [])
+
     return Phase0RuntimeConfig(
         citation_urls_normalized=urls,
         scheme_id_to_citation=sid_map,
         refusal_config=refusal,
+        schemes=scheme_rows,
     )

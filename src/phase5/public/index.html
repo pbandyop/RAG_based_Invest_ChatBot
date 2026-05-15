@@ -30,7 +30,7 @@
 
       <section class="examples" aria-labelledby="examples-heading">
         <h2 id="examples-heading">Try an example</h2>
-        <p class="hint">Choosing a scheme first improves accuracy.</p>
+        <p class="hint">Naming the fund in your question is enough; the scheme dropdown is optional.</p>
         <div class="example-buttons" role="group" aria-label="Example questions">
           <button type="button" class="btn-example" data-query="What is the expense ratio for this scheme?" data-scheme="hdfc_elss_tax_saver_direct_growth">
             ELSS — expense ratio
@@ -49,9 +49,9 @@
         <form id="query-form" novalidate>
           <label for="scheme-select">Scheme</label>
           <select id="scheme-select" name="scheme_id" aria-describedby="scheme-help">
-            <option value="">— Select scheme (recommended) —</option>
+            <option value="">— Scheme optional (use if the question is not fund-specific) —</option>
           </select>
-          <p id="scheme-help" class="field-help">Pick the fund your question is about.</p>
+          <p id="scheme-help" class="field-help">If your question already names the fund (e.g. “HDFC Mid-Cap …”), you can leave this blank.</p>
 
           <label for="question-input">Your question</label>
           <textarea

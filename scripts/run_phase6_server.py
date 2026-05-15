@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT / "src"))
 try:
     from dotenv import load_dotenv
 
-    load_dotenv(ROOT / ".env")
+    load_dotenv(ROOT / ".env", override=True)
 except ImportError:
     pass
 
