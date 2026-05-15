@@ -1,0 +1,5 @@
+# Nixpacks (Railway build) — https://nixpacks.com/docs/configuration/file
+# Pins Python to match CI (.github/workflows) and local dev.
+
+[variables]
+NIXPACKS_PYTHON_VERSION = "3.11"

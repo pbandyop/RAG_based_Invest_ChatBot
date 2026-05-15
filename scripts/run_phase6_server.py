@@ -12,7 +12,7 @@ Usage:
 Env:
   PHASE6_INDEX_DIR — optional override for Phase 2 bundle path
   PHASE6_CORS_ORIGINS — optional comma-separated origins (overrides config/phase6/defaults.json)
-  PORT — if set (e.g. Render), binds to HOST or 0.0.0.0 and uses this port
+  PORT — if set (e.g. Railway), binds to HOST or 0.0.0.0 and uses this port
   HOST — optional override when PORT is set (default 0.0.0.0 for PaaS)
 """
 
