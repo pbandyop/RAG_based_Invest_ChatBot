@@ -4,12 +4,14 @@ import json
 import logging
 import os
 import re
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
 
 from phase2.retrieve import SearchHit
+from phase3.grounding import nav_focus_only_query
 
 _log = logging.getLogger(__name__)
 
@@ -158,8 +160,34 @@ def _snippet_around_phrase(blob: str, phrase: str) -> str | None:
     return s if _is_plausible_sentence(s) else None
 
 
+def _extractive_nav_only(blob: str) -> str | None:
+    """Single Groww-style NAV line; avoids pulling SIP/AUM from the same hero blob."""
+    m = re.search(r"\bnav\s*:\s*.+?₹[\d,\s\.]+", blob, re.IGNORECASE | re.DOTALL)
+    if m:
+        s = re.sub(r"\s+", " ", m.group(0)).strip()
+        if not s.endswith("."):
+            s += "."
+        if _is_plausible_sentence(s):
+            return s
+    m = re.search(r"\bnav\s*:\s*[^.]{8,120}\.", blob, re.IGNORECASE | re.DOTALL)
+    if m:
+        s = re.sub(r"\s+", " ", m.group(0)).strip()
+        low = s.lower()
+        if any(x in low for x in ("fund size", "aum", "expense", "sip")):
+            return None
+        if _is_plausible_sentence(s):
+            return s
+    return None
+
+
 def _extractive_from_contexts(query: str, contexts: list[str], max_sentences: int = 3) -> str:
     blob = _prepare_blob(contexts)
+
+    if nav_focus_only_query(query):
+        only = _extractive_nav_only(blob)
+        if only:
+            return only
+
     picked: list[str] = []
 
     for s in _extractive_priority_expense_ratio(blob, query):
@@ -269,6 +297,18 @@ def _normalize_groq_api_key() -> str | None:
     return raw or None
 
 
+def _groq_retry_after_seconds(error_body: str) -> float | None:
+    """Parse Groq / OpenAI-style rate-limit hint (seconds or minutes+seconds)."""
+    t = (error_body or "")[:1200]
+    m = re.search(r"try again in (\d+)\s*m\s*([\d.]+)\s*s", t, re.IGNORECASE)
+    if m:
+        return int(m.group(1)) * 60 + float(m.group(2))
+    m = re.search(r"try again in ([\d.]+)\s*s", t, re.IGNORECASE)
+    if m:
+        return float(m.group(1))
+    return None
+
+
 def _groq_chat_completions_http(
     *,
     api_key: str,
@@ -287,30 +327,44 @@ def _groq_chat_completions_http(
     if json_object_mode:
         payload["response_format"] = {"type": "json_object"}
     data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=data,
-        method="POST",
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            # Groq is behind Cloudflare; the default ``Python-urllib/x.y`` UA is often blocked (HTTP 403).
-            "User-Agent": "OpenAI/Python 1.0 (NextLeapGroww/phase3; +https://github.com/pbandyop/RAG_based_Invest_ChatBot)",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            body = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode("utf-8", errors="replace")[:800]
-        _log.warning("Groq HTTP %s %s: %s", e.code, url, detail)
-        raise
-    choices = body.get("choices") or []
-    if not choices:
-        raise ValueError("Groq response missing choices")
-    msg = (choices[0].get("message") or {}) if isinstance(choices[0], dict) else {}
-    return str(msg.get("content") or "").strip()
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        # Groq is behind Cloudflare; the default ``Python-urllib/x.y`` UA is often blocked (HTTP 403).
+        "User-Agent": "OpenAI/Python 1.0 (NextLeapGroww/phase3; +https://github.com/pbandyop/RAG_based_Invest_ChatBot)",
+    }
+    max_attempts = 3
+    last_detail = ""
+    for attempt in range(max_attempts):
+        req = urllib.request.Request(url, data=data, method="POST", headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                body = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            last_detail = e.read().decode("utf-8", errors="replace")[:800]
+            _log.warning("Groq HTTP %s %s: %s", e.code, url, last_detail)
+            if e.code == 429 and attempt < max_attempts - 1:
+                hint = _groq_retry_after_seconds(last_detail)
+                if hint is not None and hint > 90:
+                    _log.warning(
+                        "Groq rate limit retry-after is %.0fs (>90s); skipping extra HTTP retries for model=%s",
+                        hint,
+                        model,
+                    )
+                    raise
+                wait = 3.0 if hint is None else min(max(hint, 1.0), 20.0)
+                _log.info("Groq 429: sleeping %.1fs then HTTP retry %s/%s", wait, attempt + 2, max_attempts)
+                time.sleep(wait)
+                continue
+            raise
+        else:
+            choices = body.get("choices") or []
+            if not choices:
+                raise ValueError("Groq response missing choices")
+            msg = (choices[0].get("message") or {}) if isinstance(choices[0], dict) else {}
+            return str(msg.get("content") or "").strip()
+    raise RuntimeError("Groq HTTP: unexpected retry loop exit")
 
 
 def groq_api_configured() -> bool:
@@ -357,6 +411,10 @@ def try_groq_json_answer(
         "If one or more EVIDENCE excerpts clearly contain that information (including facts buried inside JSON-like "
         "strings, manager names, AMC lines, NAV, AUM, fees, loads, lock-in, registrar, etc.), answer in at most "
         "three short neutral sentences using only those supported facts. "
+        "**NAV-only:** If the USER_QUESTION asks only for NAV / N.A.V. and does not ask for other statistics "
+        "(AUM, fund size, expense ratio, minimum SIP, TER, etc.), the answer must state only the NAV fact from "
+        "EVIDENCE — typically one short sentence — and must not add AUM, SIP minimums, expense ratio, or other "
+        "hero stats even when they appear in the same excerpt. "
         "If the requested information does not appear in any excerpt (or only appears in a way you cannot state "
         "faithfully without adding unsupported detail), respond with a single sentence that the evidence is "
         "insufficient — e.g. that the retrieved corpus does not contain enough to answer. "
@@ -369,9 +427,18 @@ def try_groq_json_answer(
         "No markdown, no extra keys."
     )
     user = (
-        f"USER_QUESTION:\n{query}\n\nALLOWLIST (citation_url must be one of these, verbatim):\n{allow_bullets}\n\n"
-        f"EVIDENCE (excerpts from official crawl):\n{evidence}\n"
+        f"USER_QUESTION:\n{query}\n\n"
+        "RAG_TASK: The EVIDENCE block below was retrieved from a vector index over the pilot corpus (embedding "
+        "search over scheme-page chunks). Write the answer by combining the USER_QUESTION with only facts supported "
+        "by that EVIDENCE — paraphrase or quote short spans; do not use general web knowledge or invent details.\n\n"
+        f"ALLOWLIST (citation_url must be one of these, verbatim):\n{allow_bullets}\n\n"
+        f"EVIDENCE (retrieved excerpts):\n{evidence}\n"
     )
+    if nav_focus_only_query(query):
+        user += (
+            "\nFOCUS_NAV_ONLY: The user asked about NAV only. Reply with only the NAV (as-of date if in EVIDENCE) "
+            "in one short sentence. Omit AUM, minimum SIP, expense ratio, and every other statistic.\n"
+        )
     if extra_user_instructions:
         user += f"\nADDITIONAL_INSTRUCTIONS:\n{extra_user_instructions}\n"
 

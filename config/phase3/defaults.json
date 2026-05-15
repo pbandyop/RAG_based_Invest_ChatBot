@@ -6,5 +6,6 @@
   "dedupe_by_canonical_url": true,
   "llm_base_url": "https://api.groq.com/openai/v1",
   "llm_model": "llama-3.3-70b-versatile",
+  "llm_fallback_model": "llama-3.1-8b-instant",
   "max_context_chunks": 6
 }

@@ -1,12 +1,14 @@
 # Scheduled + manual corpus refresh: Phase 1 (P1-S6 = S1→S5) + Phase 2 index build.
 # See docs/phase-wise-architecture.md §9.5.
+# Local parity (no artifacts): python scripts/run_corpus_refresh_local.py
 name: Corpus refresh
 
 on:
   workflow_dispatch:
   schedule:
-    # Weekly, Sunday 05:15 UTC — adjust cadence per robots / policy (architecture §9.5).
-    - cron: "15 5 * * 0"
+    # Daily 4:00 AM Pacific (America/Los_Angeles; DST-aware). Cadence per robots / policy (architecture §9.5).
+    - cron: "0 4 * * *"
+      timezone: "America/Los_Angeles"
 
 concurrency:
   group: corpus-refresh-${{ github.ref }}

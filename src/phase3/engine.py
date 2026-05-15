@@ -5,7 +5,13 @@ from pathlib import Path
 from typing import Any
 
 from phase2.retrieve import IndexBundle, load_index_bundle
-from phase3.grounding import grounding_ok, polish_answer_text, prefer_fact_span, truncate_to_max_sentences
+from phase3.grounding import (
+    grounding_ok,
+    nav_focus_only_query,
+    polish_answer_text,
+    prefer_fact_span,
+    truncate_to_max_sentences,
+)
 from phase3.models import Phase3Response
 from phase3.phase0_config import Phase0RuntimeConfig, load_phase0_runtime
 from phase3.query_guard import GuardResult, evaluate_query_guard
@@ -35,6 +41,16 @@ _log = logging.getLogger(__name__)
 
 # Refusal classes: no user-visible URLs (architecture §1.1 — unsupported / PII).
 _REFUSAL_NO_URL_TEMPLATES = frozenset({"refusal_out_of_corpus", "refusal_no_pii"})
+
+
+def _shape_answer_for_query(query: str, answer_text: str) -> str:
+    """Truncate, polish, intent-based span — NAV-only questions get a single sentence."""
+    out = truncate_to_max_sentences(answer_text, 3)
+    out = polish_answer_text(out)
+    out = prefer_fact_span(out, query)
+    if nav_focus_only_query(query):
+        out = truncate_to_max_sentences(out, 1)
+    return out
 
 
 class FaqRagEngine:
@@ -193,9 +209,16 @@ class FaqRagEngine:
         contexts, chunk_ids = contexts_from_hits(hits, max_chunks=max_ctx)
         allow_list = sorted(self.p0.citation_urls_normalized)
 
-        model = str(self.defaults.get("llm_model", "llama-3.3-70b-versatile"))
         llm_base = self.defaults.get("llm_base_url")
         llm_base_url = str(llm_base).strip() if llm_base else None
+
+        model_primary = str(self.defaults.get("llm_model", "llama-3.3-70b-versatile"))
+        model_fb = str(self.defaults.get("llm_fallback_model") or "").strip()
+        models_try = [model_primary]
+        if model_fb and model_fb not in models_try:
+            models_try.append(model_fb)
+
+        model = model_primary
         route = "extractive"
         answer_text = ""
 
@@ -217,12 +240,8 @@ class FaqRagEngine:
 
         use_groq = groq_api_configured()
         llm_obj: dict[str, Any] | None = None
+        groq_model_used: str | None = None
         if use_groq:
-            _log.info(
-                "phase3_synthesize groq=1 model=%s evidence_blocks=%d",
-                model,
-                len(evidence_blocks),
-            )
             groq_retry_hints: list[str | None] = [
                 None,
                 "Return exactly one JSON object with keys answer, citation_url, scheme_id. "
@@ -231,33 +250,41 @@ class FaqRagEngine:
                 "Your response must be valid JSON only (no prose outside the object). "
                 "If unsure, pick the allowlist URL closest to the top evidence chunk.",
             ]
-            for hint in groq_retry_hints:
-                llm_obj = try_groq_json_answer(
-                    query=query,
-                    evidence_blocks=evidence_blocks,
-                    allowlist_urls=allow_list,
-                    model=model,
-                    base_url=llm_base_url,
-                    extra_user_instructions=hint,
+            for try_model in models_try:
+                _log.info(
+                    "phase3_synthesize groq=1 model=%s evidence_blocks=%d",
+                    try_model,
+                    len(evidence_blocks),
                 )
-                if isinstance(llm_obj, dict) and str(llm_obj.get("answer") or "").strip():
+                for hint in groq_retry_hints:
+                    llm_obj = try_groq_json_answer(
+                        query=query,
+                        evidence_blocks=evidence_blocks,
+                        allowlist_urls=allow_list,
+                        model=try_model,
+                        base_url=llm_base_url,
+                        extra_user_instructions=hint,
+                    )
+                    if isinstance(llm_obj, dict) and str(llm_obj.get("answer") or "").strip():
+                        groq_model_used = try_model
+                        model = try_model
+                        break
+                    llm_obj = None
+                if llm_obj:
                     break
-                llm_obj = None
 
         else:
             _log.info("phase3_synthesize groq=0 (no GROQ_API_KEY in .env / environment after dotenv)")
 
         if isinstance(llm_obj, dict) and llm_obj.get("answer"):
             answer_text, citation_url, sid = self._apply_llm_dict(llm_obj, citation_url=citation_url, sid=sid)
-            route = "groq"
+            route = "groq" if groq_model_used == models_try[0] else "groq_fallback"
 
         if not answer_text:
             answer_text = _extractive_from_contexts(query, contexts)
             route = "extractive"
 
-        answer_text = truncate_to_max_sentences(answer_text, 3)
-        answer_text = polish_answer_text(answer_text)
-        answer_text = prefer_fact_span(answer_text, query)
+        answer_text = _shape_answer_for_query(query, answer_text)
 
         ok, reason = grounding_ok(
             answer=answer_text,
@@ -267,7 +294,7 @@ class FaqRagEngine:
             scheme_id_to_citation=self.p0.scheme_id_to_citation,
         )
 
-        if not ok and reason == "forbidden_phrase" and route == "groq":
+        if not ok and reason == "forbidden_phrase" and route.startswith("groq"):
             llm_retry = try_groq_json_answer(
                 query=query,
                 evidence_blocks=evidence_blocks,
@@ -282,9 +309,7 @@ class FaqRagEngine:
             )
             if isinstance(llm_retry, dict) and llm_retry.get("answer"):
                 answer_text, citation_url, sid = self._apply_llm_dict(llm_retry, citation_url=citation_url, sid=sid)
-                answer_text = truncate_to_max_sentences(answer_text, 3)
-                answer_text = polish_answer_text(answer_text)
-                answer_text = prefer_fact_span(answer_text, query)
+                answer_text = _shape_answer_for_query(query, answer_text)
                 ok, reason = grounding_ok(
                     answer=answer_text,
                     citation_url=citation_url,
@@ -316,9 +341,7 @@ class FaqRagEngine:
                         answer_text, citation_url, sid = self._apply_llm_dict(
                             llm_fix, citation_url=citation_url, sid=sid
                         )
-                        answer_text = truncate_to_max_sentences(answer_text, 3)
-                        answer_text = polish_answer_text(answer_text)
-                        answer_text = prefer_fact_span(answer_text, query)
+                        answer_text = _shape_answer_for_query(query, answer_text)
                         ok, reason = grounding_ok(
                             answer=answer_text,
                             citation_url=citation_url,
@@ -331,9 +354,7 @@ class FaqRagEngine:
                             break
                 if not ok:
                     answer_text = _extractive_from_contexts(query, contexts)
-                    answer_text = truncate_to_max_sentences(answer_text, 3)
-                    answer_text = polish_answer_text(answer_text)
-                    answer_text = prefer_fact_span(answer_text, query)
+                    answer_text = _shape_answer_for_query(query, answer_text)
                     ok2, _ = grounding_ok(
                         answer=answer_text,
                         citation_url=citation_url,

@@ -80,7 +80,8 @@ def scheme_clarification_needed(
     if abs(s0 - s1) <= margin:
         msg = (
             "Retrieval found similar matches for more than one pilot scheme. "
-            "Please choose a scheme (dropdown in the UI) or name the fund explicitly in your question."
+            "Name the fund in your question (for example the full scheme name from Groww), "
+            "or pick it from the Pilot corpus list in the sidebar under “Pilot corpus on Groww”."
         )
         return True, msg
     return False, None
@@ -133,8 +134,62 @@ def prioritize_hero_stat_chunks(hits: list[SearchHit], query: str) -> list[Searc
 
 _SLUG_STOPWORDS = frozenset(
     "hdfc fund direct growth plan the a an of for in on to and or g p v r www http https com in "
-    "mutual funds what which is are was how much about tell please scheme mf".split()
+    "mutual funds what which is are was how much about tell please scheme mf nav".split()
 )
+
+
+def _nominalize_fund_alias_key(s: str) -> str:
+    """Normalize fund names for token overlap (e.g. TaxSaver -> tax saver)."""
+    t = (s or "").lower()
+    t = re.sub(r"[^\w\s]", " ", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    # CamelCase-like joins: taxsaver -> tax saver (Groww uses TaxSaver in display names).
+    t = re.sub(r"([a-z])([A-Z])", r"\1 \2", t)
+    t = t.replace("taxsaver", "tax saver").replace("tax saver", "tax saver")
+    return t
+
+
+def _scheme_signal_tokens(row: dict[str, Any]) -> list[str]:
+    """Tokens from slug URL, display name, and optional query_aliases (deduped, order preserved)."""
+    pieces: list[str] = []
+    url = str(row.get("citation_url") or "").strip()
+    display = str(row.get("display_name") or "").strip()
+    if url:
+        slug = url.rstrip("/").split("/")[-1].lower().replace("-", " ")
+        pieces.append(slug)
+    if display:
+        pieces.append(_nominalize_fund_alias_key(display))
+    for a in row.get("query_aliases") or []:
+        if isinstance(a, str) and a.strip():
+            pieces.append(_nominalize_fund_alias_key(a.strip()))
+
+    raw: list[str] = []
+    for p in pieces:
+        raw.extend(re.findall(r"[a-z0-9]+", p.lower()))
+
+    out: list[str] = []
+    seen: set[str] = set()
+    for t in raw:
+        if t in _SLUG_STOPWORDS or len(t) < 2:
+            continue
+        if t not in seen:
+            seen.add(t)
+            out.append(t)
+    return out
+
+
+def _scheme_key_phrase_boost(query_norm: str, row: dict[str, Any]) -> int:
+    """Strong match when a multi-word alias or display substring appears in the query."""
+    display = _nominalize_fund_alias_key(str(row.get("display_name") or "").strip())
+    if display and len(display) >= 8 and display in query_norm:
+        return 4
+    for a in row.get("query_aliases") or []:
+        if not isinstance(a, str):
+            continue
+        a2 = _nominalize_fund_alias_key(a.strip())
+        if len(a2) >= 6 and a2 in query_norm:
+            return 3
+    return 0
 
 _STAT_ANCHOR_QUERY = "NAV ₹ fund size AUM expense ratio TER minimum SIP"
 
@@ -166,15 +221,19 @@ def _chunk_has_manager_signal(text: str) -> bool:
 
 def infer_scheme_id_from_query(query: str, schemes: list[dict[str, Any]]) -> str | None:
     """
-    Infer ``scheme_id`` from fund wording in the question (Groww URL slug tokens).
-    Returns None when no scheme meets a 2/3 token-coverage bar or top scores tie.
+    Infer ``scheme_id`` from fund wording in the question.
+
+    Uses slug tokens, display names, and optional ``query_aliases`` on each scheme row
+    (see ``config/phase0/schemes.json``). Returns None when no scheme meets coverage or when top scores tie.
+
     """
     if not schemes:
         return None
     q = (query or "").strip().lower()
     if not q:
         return None
-    q_tokens = set(re.findall(r"[a-z0-9]+", q))
+    q_tokens = set(re.findall(r"[a-z0-9]+", _nominalize_fund_alias_key(query)))
+    q_norm = _nominalize_fund_alias_key(query)
 
     candidates: list[tuple[int, str]] = []
     for row in schemes:
@@ -182,21 +241,29 @@ def infer_scheme_id_from_query(query: str, schemes: list[dict[str, Any]]) -> str
         url = str(row.get("citation_url") or "").strip()
         if not sid or not url:
             continue
-        slug = url.rstrip("/").split("/")[-1].lower().replace("-", " ")
-        raw_toks = [t for t in re.findall(r"[a-z0-9]+", slug) if t not in _SLUG_STOPWORDS and len(t) >= 2]
-        if not raw_toks:
+        tokens = _scheme_signal_tokens(row)
+        if not tokens:
             continue
-        tokens: list[str] = []
-        seen: set[str] = set()
-        for t in raw_toks:
-            if t not in seen:
-                seen.add(t)
-                tokens.append(t)
+
+        # Weight: slug-derived tokens count more (earlier in list) than display extras.
+        weighted = 0
+        for i, t in enumerate(tokens):
+            if t not in q_tokens:
+                continue
+            w = 3 if i < min(12, len(tokens)) else 2
+            if t in ("direct", "regular"):
+                w += 1
+            weighted += w
+
+        weighted += _scheme_key_phrase_boost(q_norm, row)
+
         n = len(tokens)
-        score = sum(1 for t in tokens if t in q_tokens)
-        if n == 0 or score * 3 < n * 2:
+        plain_hits = sum(1 for t in tokens if t in q_tokens)
+        if weighted <= 0 and plain_hits * 3 < n * 2:
             continue
-        candidates.append((score, sid))
+        if plain_hits == 0 and _scheme_key_phrase_boost(q_norm, row) == 0:
+            continue
+        candidates.append((weighted, sid))
 
     if not candidates:
         return None

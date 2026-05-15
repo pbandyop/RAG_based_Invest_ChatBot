@@ -10,6 +10,28 @@ _FORBIDDEN = re.compile(
     re.IGNORECASE,
 )
 
+_NAV_WORD = re.compile(r"\b(nav|n\.a\.v\.)\b", re.IGNORECASE)
+# If the user also asks for these, the answer may include multiple hero stats.
+_OTHER_STAT_WORDS = re.compile(
+    r"\b(aum|assets\s+under\s+management|fund\s+size|expense|"
+    r"\bratio\b|\bter\b|sip|systematic|exit\s+load|benchmark|"
+    r"lock[- ]?in|tax|return|performance|cagr|yield|rating)\b",
+    re.IGNORECASE,
+)
+
+
+def nav_focus_only_query(query: str) -> bool:
+    """
+    True when the question is NAV-centric and does not ask for other scheme stats
+    (AUM, expense, SIP, etc.). Used to keep answers tight for RAG output.
+    """
+    q = query or ""
+    if not _NAV_WORD.search(q):
+        return False
+    if _OTHER_STAT_WORDS.search(q):
+        return False
+    return True
+
 
 def sentence_count(text: str) -> int:
     t = (text or "").strip()
@@ -47,9 +69,30 @@ def prefer_fact_span(answer: str, query: str) -> str:
         if m:
             return re.sub(r"\s+", " ", m.group(1)).strip()
     if re.search(r"\b(nav|n\.a\.v\.)\b", q):
+        if nav_focus_only_query(q):
+            m = re.search(r"\bnav\s*:\s*.+?₹[\d,\s\.]+", a, re.IGNORECASE | re.DOTALL)
+            if m:
+                s = re.sub(r"\s+", " ", m.group(0)).strip()
+                if not s.endswith("."):
+                    s += "."
+                return s
+            m = re.search(r"\bnav\s*:\s*[^.]{8,120}\.", a, re.IGNORECASE | re.DOTALL)
+            if m:
+                s = re.sub(r"\s+", " ", m.group(0)).strip()
+                low = s.lower()
+                if "fund size" not in low and "aum" not in low and "expense" not in low and "sip" not in low:
+                    return s
         m = re.search(r"(\bnav\s*:\s*.+?min\.)", a, re.IGNORECASE | re.DOTALL)
         if m:
-            return re.sub(r"\s+", " ", m.group(1)).strip()
+            frag = re.sub(r"\s+", " ", m.group(1)).strip()
+            if nav_focus_only_query(q):
+                frag_l = frag.lower()
+                if "fund size" in frag_l or "sip" in frag_l or "aum" in frag_l or "expense" in frag_l:
+                    m2 = re.search(r"\bnav\s*:\s*.+?₹[\d,\s\.]+", a, re.IGNORECASE | re.DOTALL)
+                    if m2:
+                        s2 = re.sub(r"\s+", " ", m2.group(0)).strip()
+                        return s2 + ("." if not s2.endswith(".") else "")
+            return frag
         m = re.search(r"(\bnav\s*:\s*.{12,280}\.)", a, re.IGNORECASE | re.DOTALL)
         if m:
             return re.sub(r"\s+", " ", m.group(1)).strip()

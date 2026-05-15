@@ -1,86 +1,406 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="h-full dark" lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>HDFC MF FAQ — pilot (facts-only)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HDFC Mutual Fund Chat Assistant — pilot</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=JetBrains+Mono:wght@400..600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="styles.css" />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "error-container": "#93000a",
+              "surface-container-highest": "#273647",
+              "on-background": "#d4e4fa",
+              "inverse-primary": "#006875",
+              "on-surface": "#d4e4fa",
+              "surface-bright": "#2c3a4c",
+              "tertiary-container": "#fec931",
+              secondary: "#b7c8e1",
+              "on-primary": "#00363d",
+              "surface-dim": "#051424",
+              outline: "#849396",
+              "on-tertiary-fixed": "#251a00",
+              "on-tertiary": "#3e2e00",
+              "surface-tint": "#00daf3",
+              "inverse-on-surface": "#233143",
+              "on-secondary-container": "#a9bad3",
+              surface: "#051424",
+              background: "#051424",
+              "secondary-fixed": "#d3e4fe",
+              "on-primary-container": "#00626e",
+              "secondary-fixed-dim": "#b7c8e1",
+              "primary-container": "#00e5ff",
+              primary: "#c3f5ff",
+              "surface-container-low": "#0d1c2d",
+              "on-secondary-fixed": "#0b1c30",
+              "on-error": "#690005",
+              "outline-variant": "#3b494c",
+              "surface-container-high": "#1c2b3c",
+              "surface-container-lowest": "#010f1f",
+              "inverse-surface": "#d4e4fa",
+              error: "#ffb4ab",
+              "on-error-container": "#ffdad6",
+              "primary-fixed": "#9cf0ff",
+              "primary-fixed-dim": "#00daf3",
+              "tertiary-fixed-dim": "#f3bf26",
+              "surface-variant": "#273647",
+              "on-surface-variant": "#bac9cc",
+              "surface-container": "#122131",
+              "on-secondary-fixed-variant": "#38485d",
+              "on-primary-fixed-variant": "#004f58",
+              "secondary-container": "#3a4a5f",
+              "tertiary-fixed": "#ffdf96",
+              "on-tertiary-fixed-variant": "#594400",
+              "on-primary-fixed": "#001f24",
+              "on-tertiary-container": "#6f5500",
+              "on-secondary": "#213145",
+              tertiary: "#ffeac0",
+            },
+            borderRadius: {
+              DEFAULT: "0.125rem",
+              lg: "0.25rem",
+              xl: "0.5rem",
+              full: "0.75rem",
+            },
+            spacing: {
+              "margin-desktop": "32px",
+              "margin-mobile": "16px",
+              base: "4px",
+              md: "16px",
+              lg: "24px",
+              sm: "12px",
+              xl: "32px",
+              xs: "8px",
+              gutter: "16px",
+            },
+            fontFamily: {
+              sans: ["Geist", "system-ui", "sans-serif"],
+              mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+            },
+          },
+        },
+      };
+    </script>
   </head>
-  <body>
-    <header class="site-header">
-      <h1>Mutual fund FAQ — pilot</h1>
-      <p class="subtitle">HDFC schemes on Groww (corpus) · facts-only answers</p>
-    </header>
+  <body class="h-full overflow-hidden bg-background font-sans text-on-background antialiased">
+    <div class="flex h-full">
+      <div
+        class="sidebar-overlay fixed inset-0 z-40 hidden bg-black/60 transition-opacity lg:hidden"
+        id="sidebar-overlay"
+        aria-hidden="true"
+      ></div>
 
-    <aside class="disclaimer-sticky" id="disclaimer-bar" role="note" aria-live="polite">
-      <span id="disclaimer-text">Loading…</span>
-    </aside>
-
-    <main class="main">
-      <section class="welcome" aria-labelledby="welcome-heading">
-        <h2 id="welcome-heading">How this assistant works</h2>
-        <p>
-          This pilot answers <strong>factual</strong> questions about a small set of
-          <strong>HDFC Mutual Fund</strong> schemes using text retrieved from official
-          <strong>Groww</strong> scheme pages. It does <strong>not</strong> give investment advice,
-          rankings, or return predictions. Each successful answer includes one Groww link and a
-          “last updated” line from our crawl.
-        </p>
-      </section>
-
-      <section class="examples" aria-labelledby="examples-heading">
-        <h2 id="examples-heading">Try an example</h2>
-        <p class="hint">Naming the fund in your question is enough; the scheme dropdown is optional.</p>
-        <div class="example-buttons" role="group" aria-label="Example questions">
-          <button type="button" class="btn-example" data-query="What is the expense ratio for this scheme?" data-scheme="hdfc_elss_tax_saver_direct_growth">
-            ELSS — expense ratio
+      <aside
+        class="sidebar fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 -translate-x-full flex-col border-r border-outline-variant bg-surface-container transition-transform lg:relative lg:translate-x-0"
+        id="sidebar"
+        data-purpose="navigation-sidebar"
+      >
+        <div class="p-6">
+          <h1 class="text-xl font-bold tracking-tight text-on-surface">HDFC Mutual Fund Chat Assistant.</h1>
+          <p class="mt-1 text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant">HDFC pilot • Groww corpus</p>
+        </div>
+        <nav class="flex flex-1 flex-col space-y-1 px-3">
+          <button
+            type="button"
+            id="new-chat-btn"
+            class="group mb-4 flex w-full items-center gap-3 rounded-lg border border-outline-variant bg-surface-container-highest px-4 py-3 text-on-surface transition-all hover:bg-surface-bright"
+          >
+            <svg class="h-5 w-5 text-primary-fixed-dim transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+            </svg>
+            <span class="text-sm font-bold tracking-tight">New chat</span>
           </button>
-          <button type="button" class="btn-example" data-query="What is the minimum SIP amount for this fund?" data-scheme="hdfc_mid_cap_direct_growth">
-            Mid-cap — minimum SIP
+          <span class="flex items-center gap-3 rounded-lg border border-outline-variant/30 bg-surface-container-high px-4 py-2.5 text-on-surface">
+            <svg class="h-5 w-5 text-primary-fixed-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+              />
+            </svg>
+            <span class="text-sm font-medium">Chat</span>
+          </span>
+
+          <div class="pt-3">
+            <p class="px-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-outline">Recent</p>
+            <ul id="chat-sessions-list" class="max-h-36 space-y-0.5 overflow-y-auto pr-0.5 lg:max-h-44" aria-label="Saved conversations"></ul>
+          </div>
+          <div class="pt-4">
+            <button
+              type="button"
+              id="corpus-nav-toggle"
+              class="group flex w-full items-center justify-between px-4 py-2 text-on-surface-variant transition-colors hover:text-on-surface"
+              aria-expanded="false"
+              aria-controls="corpus-nav-panel"
+            >
+              <div class="flex items-center gap-3">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                  />
+                </svg>
+                <span class="text-sm font-medium">Pilot corpus on Groww</span>
+              </div>
+              <svg class="corpus-chevron h-4 w-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div
+              id="corpus-nav-panel"
+              class="mt-2 hidden max-h-52 overflow-y-auto rounded-lg border border-outline-variant/50 bg-surface-container-low/90 py-1 pl-2 pr-1"
+              role="region"
+              aria-label="Funds in pilot corpus"
+            >
+              <ul id="corpus-fund-list" class="m-0 list-none space-y-0.5 p-0"></ul>
+            </div>
+          </div>
+
+          <div class="mt-auto pt-6">
+            <button
+              type="button"
+              id="clear-chat-btn"
+              class="group flex w-full items-center gap-3 px-4 py-2 text-outline transition-colors hover:text-on-surface-variant"
+              aria-label="Delete the current conversation only"
+            >
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+              <span class="text-[10px] font-semibold uppercase tracking-wider">Delete this chat</span>
+            </button>
+          </div>
+        </nav>
+        <div class="border-t border-outline-variant p-6">
+          <p class="text-[10px] font-bold uppercase leading-relaxed tracking-wider text-outline">Facts-only • descriptive • no accounts</p>
+        </div>
+      </aside>
+
+      <main class="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-background" data-purpose="main-chat">
+        <div class="flex items-center justify-between border-b border-outline-variant bg-surface-container/50 p-4 lg:hidden">
+          <button
+            type="button"
+            id="sidebar-open-btn"
+            class="rounded-lg p-2 text-on-surface transition-colors hover:bg-surface-bright"
+            aria-label="Open menu"
+          >
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
           </button>
-          <button type="button" class="btn-example" data-query="What is the exit load for this scheme?" data-scheme="hdfc_large_cap_direct_growth">
-            Large-cap — exit load
+          <h2 class="text-sm font-bold uppercase tracking-wider text-primary-fixed-dim">HDFC assistant</h2>
+          <button
+            type="button"
+            id="corpus-mobile-open"
+            class="rounded-lg p-2 text-on-surface transition-colors hover:bg-surface-bright"
+            aria-label="Pilot fund list"
+            aria-haspopup="dialog"
+            aria-controls="corpus-mobile-sheet"
+          >
+            <svg class="h-6 w-6 text-primary-fixed-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
+            </svg>
           </button>
         </div>
-      </section>
 
-      <section class="query-panel" aria-labelledby="ask-heading">
-        <h2 id="ask-heading">Ask a question</h2>
-        <form id="query-form" novalidate>
-          <label for="scheme-select">Scheme</label>
-          <select id="scheme-select" name="scheme_id" aria-describedby="scheme-help">
-            <option value="">— Scheme optional (use if the question is not fund-specific) —</option>
-          </select>
-          <p id="scheme-help" class="field-help">If your question already names the fund (e.g. “HDFC Mid-Cap …”), you can leave this blank.</p>
-
-          <label for="question-input">Your question</label>
-          <textarea
-            id="question-input"
-            name="query"
-            rows="4"
-            maxlength="4000"
-            required
-            placeholder="e.g. What is the benchmark for this fund?"
-            autocomplete="off"
-          ></textarea>
-          <p class="field-help">Do not paste PAN, Aadhaar, account numbers, or OTPs.</p>
-
-          <div class="form-actions">
-            <button type="submit" class="btn-primary" id="submit-btn">Get answer</button>
-            <span class="status" id="status" aria-live="polite"></span>
+        <header class="shrink-0 px-4 pb-4 pt-6 text-center lg:pt-8" data-purpose="main-header">
+          <h2 class="text-2xl font-bold tracking-tight text-primary-fixed-dim">HDFC mutual fund assistant</h2>
+          <p class="mt-1 text-sm font-medium text-on-surface-variant">Chat with facts from our Groww pilot corpus</p>
+          <div class="mt-6 flex justify-center">
+            <div class="flex items-center gap-2 rounded-full border border-outline-variant/30 bg-surface-container-low px-4 py-1.5">
+              <svg class="h-4 w-4 text-tertiary-fixed-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span id="disclaimer-text" class="text-[11px] font-semibold text-on-surface-variant">Loading…</span>
+            </div>
           </div>
-        </form>
-      </section>
+        </header>
 
-      <section class="result" id="result-section" hidden aria-live="polite">
-        <h2>Response</h2>
-        <div id="result-body" class="result-body"></div>
-      </section>
-    </main>
+        <div id="chat-thread" class="min-h-0 flex-1 overflow-y-auto" data-purpose="chat-scroll" aria-label="Chat transcript">
+          <div id="chat-thread-messages" class="mx-auto max-w-3xl space-y-8 px-4 py-6" role="log" aria-relevant="additions">
+            <div id="chat-welcome" class="flex animate-fade-in items-start gap-4">
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-high shadow-sm">
+                <svg class="h-5 w-5 text-primary-fixed-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+                  />
+                </svg>
+              </div>
+              <div class="assistant-bubble-shell flex-1 rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-xl">
+                <p class="body-md leading-relaxed text-on-surface">
+                  Hi — I’m a <strong class="font-semibold text-on-surface">facts-only</strong> assistant for the HDFC schemes in this pilot. Ask
+                  about NAV, fees, SIP minimums, and similar details; I’ll answer from retrieved Groww pages. I don’t give advice or predictions.
+                </p>
+                <div class="mt-4 border-t border-outline-variant/50 pt-4">
+                  <p class="flex items-center gap-2 text-sm italic text-on-surface-variant">
+                    <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Tip: name the fund in your message, or pick one from the corpus list in the sidebar.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    <footer class="site-footer">
-      <p>Pilot corpus: Groww.in · Citations are Groww scheme pages only.</p>
-    </footer>
+        <footer id="chat-composer" class="shrink-0 bg-gradient-to-t from-background via-background to-transparent px-4 pb-6 pt-4 lg:pb-10" data-purpose="input-section">
+          <div class="mx-auto max-w-3xl space-y-4">
+            <div class="flex flex-wrap justify-center gap-2" role="group" aria-label="Suggested prompts">
+              <button
+                type="button"
+                class="btn-example rounded-full border border-outline-variant bg-surface-container-low px-3 py-1.5 text-[11px] font-medium text-on-surface-variant transition-all hover:border-primary-fixed-dim hover:text-on-surface"
+                data-query="What is the expense ratio for HDFC TaxSaver (ELSS) Direct Growth?"
+              >
+                ELSS • expense ratio
+              </button>
+              <button
+                type="button"
+                class="btn-example rounded-full border border-outline-variant bg-surface-container-low px-3 py-1.5 text-[11px] font-medium text-on-surface-variant transition-all hover:border-primary-fixed-dim hover:text-on-surface"
+                data-query="What is the minimum SIP amount for HDFC Mid-Cap Fund Direct Growth?"
+              >
+                Mid-cap • SIP
+              </button>
+              <button
+                type="button"
+                class="btn-example rounded-full border border-outline-variant bg-surface-container-low px-3 py-1.5 text-[11px] font-medium text-on-surface-variant transition-all hover:border-primary-fixed-dim hover:text-on-surface"
+                data-query="What is the exit load for HDFC Large Cap Fund Direct Growth?"
+              >
+                Large-cap • exit load
+              </button>
+            </div>
+
+            <form id="query-form" class="space-y-2" novalidate>
+              <div class="group relative">
+                <div class="absolute inset-0 rounded-2xl bg-primary-fixed-dim/5 blur-md transition-all group-focus-within:bg-primary-fixed-dim/10"></div>
+                <div
+                  class="relative flex items-end rounded-2xl border border-outline-variant bg-surface-container-high/90 p-2 shadow-2xl transition-all focus-within:border-primary-fixed-dim/50"
+                >
+                  <label class="sr-only" for="question-input">Message</label>
+                  <textarea
+                    id="question-input"
+                    name="query"
+                    rows="1"
+                    maxlength="4000"
+                    autocomplete="off"
+                    required
+                    placeholder="Message about a pilot HDFC fund on Groww…"
+                    class="max-h-40 min-h-[48px] flex-1 resize-none border-0 bg-transparent px-4 py-3 text-base text-on-surface placeholder:text-outline focus:ring-0 lg:text-lg"
+                  ></textarea>
+                  <button
+                    type="submit"
+                    id="submit-btn"
+                    class="mb-0.5 rounded-xl bg-primary-fixed-dim p-3 text-on-primary-fixed shadow-lg transition-all hover:bg-surface-tint active:scale-95"
+                    aria-label="Send message"
+                  >
+                    <svg class="h-6 w-6 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+                <p class="mb-0 text-center text-[10px] font-bold uppercase tracking-[0.1em] text-outline lg:text-[11px]">
+                  No PAN, Aadhaar, bank details, or OTPs.
+                </p>
+                <span id="status" class="text-center font-mono text-[10px] text-on-surface-variant sm:text-right" aria-live="polite"></span>
+              </div>
+              <div class="flex justify-between text-[9px] font-medium uppercase tracking-wider text-outline-variant">
+                <span>Groww scheme citations only</span>
+                <span>pilot</span>
+              </div>
+            </form>
+          </div>
+        </footer>
+      </main>
+    </div>
+
+    <div
+      id="corpus-mobile-backdrop"
+      class="fixed inset-0 z-[60] hidden bg-black/60 lg:hidden"
+      aria-hidden="true"
+    ></div>
+    <div
+      id="corpus-mobile-sheet"
+      class="fixed bottom-0 left-0 right-0 z-[70] max-h-[78vh] overflow-hidden rounded-t-2xl border-t border-outline-variant bg-surface-container shadow-[0_-8px_32px_rgba(0,0,0,0.45)] lg:hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="corpus-mobile-title"
+      hidden
+    >
+      <div class="flex items-center justify-between border-b border-outline-variant/80 px-4 py-3">
+        <h2 id="corpus-mobile-title" class="font-mono text-sm font-bold text-on-surface">Pilot corpus on Groww</h2>
+        <button
+          type="button"
+          id="corpus-mobile-close"
+          class="rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container-high"
+          aria-label="Close fund list"
+        >
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <ul id="corpus-fund-list-mobile" class="max-h-[min(60vh,28rem)] list-none overflow-y-auto px-4 py-3"></ul>
+    </div>
+
+    <template id="chat-welcome-template">
+      <div id="chat-welcome" class="flex animate-fade-in items-start gap-4">
+        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-high shadow-sm">
+          <svg class="h-5 w-5 text-primary-fixed-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+            />
+          </svg>
+        </div>
+        <div class="assistant-bubble-shell flex-1 rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-xl">
+          <p class="body-md leading-relaxed text-on-surface">
+            Hi — I’m a <strong class="font-semibold text-on-surface">facts-only</strong> assistant for the HDFC schemes in this pilot. Ask about NAV,
+            fees, SIP minimums, and similar details; I’ll answer from retrieved Groww pages. I don’t give advice or predictions.
+          </p>
+          <div class="mt-4 border-t border-outline-variant/50 pt-4">
+            <p class="flex items-center gap-2 text-sm italic text-on-surface-variant">
+              <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Tip: name the fund in your message, or pick one from the corpus list in the sidebar.
+            </p>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <script src="app.js" defer></script>
   </body>

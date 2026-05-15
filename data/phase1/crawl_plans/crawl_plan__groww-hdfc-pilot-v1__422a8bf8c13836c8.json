@@ -2,7 +2,7 @@
   "p1_subphase": "P1-S1",
   "run_id": "groww-hdfc-pilot-v1__422a8bf8c13836c8",
   "plan_fingerprint_sha256": "422a8bf8c13836c88332d733c31267700c13e9b53047f5df719cf22ed537ca9d",
-  "generated_at_utc": "2026-05-14T18:48:24.939208+00:00",
+  "generated_at_utc": "2026-05-15T22:19:43.602047+00:00",
   "manifest_id": "groww-hdfc-pilot-v1",
   "manifest_version": "1.0.0",
   "manifest_path_note": "bind from config/phase0/manifest.json at generation time",
