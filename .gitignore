@@ -7,8 +7,11 @@ data/phase1/normalized/**
 !data/phase1/normalized/.gitkeep
 data/phase2/chunks/*
 !data/phase2/chunks/.gitkeep
-data/phase2/index/**
+# Default: ignore locally built index bundles. Pilot bundle is tracked for Railway/deploy.
+data/phase2/index/*
 !data/phase2/index/.gitkeep
+!data/phase2/index/groww-hdfc-pilot-v1__422a8bf8c13836c8/
+!data/phase2/index/groww-hdfc-pilot-v1__422a8bf8c13836c8/**
 # Python
 __pycache__/
 *.py[cod]

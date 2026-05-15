@@ -4,10 +4,7 @@ Phase 6 is one FastAPI app (`src/phase6`) that can serve both API routes and the
 
 ## Prerequisites
 
-1. **Phase 2 index bundle** must exist on the Railway service filesystem at runtime. The repo `.gitignore` excludes `data/phase2/index/**` by default. Choose one:
-   - Check in a pilot bundle (or use **Git LFS**) for the path you set in `PHASE6_INDEX_DIR`, **or**
-   - Add a **build or deploy step** on Railway that downloads a tarball/artifact and extracts it under `data/phase2/index/`, **or**
-   - Run `python scripts/run_phase2_build_index.py` in a custom build command (slow; needs HF model download and RAM).
+1. **Phase 2 index bundle** must exist on the Railway service filesystem at runtime. This repo **ships a tracked pilot bundle** at `data/phase2/index/groww-hdfc-pilot-v1__422a8bf8c13836c8/` (see `.gitignore` exceptions) so a stock deploy works without extra steps. For other bundles: set **`PHASE6_INDEX_DIR`** to a directory that contains **`manifest.json`**, **or** add a build/deploy step that downloads or builds an index under `data/phase2/index/`, **or** use Git LFS for large bundles.
 2. **Secrets:** set `GROQ_API_KEY` on Railway if you want Groq-backed answers (see Phase 3). Optional: `HF_TOKEN` for Hugging Face rate limits when the embedding model is first downloaded.
 3. **Python 3.11** is recommended (matches CI). The repo pins it with **`.python-version`** (`3.11`) and **`nixpacks.toml`** (`NIXPACKS_PYTHON_VERSION = "3.11"`). **`railway.toml`** sets **`[build] builder = "NIXPACKS"`** so those Nixpacks settings apply. You can still override the Python version in the Railway dashboard if needed.
 
@@ -19,6 +16,7 @@ Phase 6 is one FastAPI app (`src/phase6`) that can serve both API routes and the
 | `nixpacks.toml` | `NIXPACKS_PYTHON_VERSION` → **3.11** |
 | `.python-version` | **3.11** (builders that read this file) |
 | `requirements.txt` | Nixpacks install phase runs `pip install -r requirements.txt` |
+| `data/phase2/index/groww-hdfc-pilot-v1__422a8bf8c13836c8/` | Committed FAISS bundle (`manifest.json`, `index.faiss`, …) for deploy |
 | `scripts/run_phase6_server.py` | Binds `0.0.0.0:$PORT` when Railway sets `PORT` |
 
 ---
@@ -40,7 +38,7 @@ Add these under the service **Variables** tab:
 
 | Key | Required | Example / notes |
 |-----|----------|------------------|
-| `PHASE6_INDEX_DIR` | Yes | `data/phase2/index/<your_run_id>` (path relative to repo root on the running container) |
+| `PHASE6_INDEX_DIR` | Only if not using default | Omit to auto-pick latest index under `data/phase2/index/` (the committed pilot bundle). Set to override, e.g. `data/phase2/index/<other_run_id>` |
 | `GROQ_API_KEY` | Recommended | From Groq console |
 | `HF_TOKEN` | Optional | Hugging Face token for Hub rate limits |
 | `PHASE6_CORS_ORIGINS` | Optional | Comma-separated origins if browsers call the **Railway URL** directly (e.g. `https://your-app.vercel.app`). Not required if all browser traffic goes through Vercel rewrites only. |
