@@ -1,0 +1,20 @@
+# Render Blueprint — Phase 6 API. Full notes: deploy/HOSTING-RENDER-VERCEL.md
+#
+# Before first deploy: ensure PHASE6_INDEX_DIR exists on disk (bundle under
+# data/phase2/index/ or adjust path). The repo gitignores index files by default.
+services:
+  - type: web
+    name: nextleap-groww-phase6-api
+    runtime: python
+    plan: starter
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=src python scripts/run_phase6_server.py
+    healthCheckPath: /health
+    envVars:
+      - key: PHASE6_INDEX_DIR
+        value: data/phase2/index/groww-hdfc-pilot-v1__422a8bf8c13836c8
+      - key: GROQ_API_KEY
+        sync: false
+      - key: HF_TOKEN
+        sync: false
