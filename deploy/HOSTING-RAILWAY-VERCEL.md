@@ -1,6 +1,6 @@
 # Hosting: Railway (backend API) + Vercel (static frontend)
 
-Phase 6 is one FastAPI app (`src/phase6`) that can serve both API routes and the Phase 5 UI. For a split deployment, **Railway runs the Python API** (you can still open `/ui` on the Railway URL for debugging), while **Vercel serves** `src/phase5/public`. The browser talks to your Vercel origin; **rewrites** send `/query`, `/meta/*`, and `/health` to a **serverless proxy** (`api/railway/[...path].js`) that forwards to **`RAILWAY_API_URL`**, so `app.js` can keep using same-origin URLs (`apiUrl` uses `window.location.origin`).
+Phase 6 is one FastAPI app (`src/phase6`) that can serve both API routes and the Phase 5 UI. For a split deployment, **Railway runs the Python API** (you can still open `/ui` on the Railway URL for debugging), while **Vercel deploys the `frontend/` directory**: build copies **`src/phase5/public`** into **`frontend/public/`**, and **rewrites** send `/query`, `/meta/*`, and `/health` to a **serverless proxy** that forwards to **`RAILWAY_API_URL`**, so `app.js` can keep using same-origin URLs (`apiUrl` uses `window.location.origin`).
 
 ## Prerequisites
 
@@ -21,11 +21,15 @@ Phase 6 is one FastAPI app (`src/phase6`) that can serve both API routes and the
 
 ### Repo files used by Vercel (frontend)
 
-| File | Role |
+Deploy with Vercel **Root Directory = `frontend`** (a normal static site root + serverless `api/`).
+
+| Path | Role |
 |------|------|
-| `vercel.json` | `outputDirectory` → `src/phase5/public`; rewrites API paths to `/api/railway/...` |
-| `api/railway/[...path].js` | Proxies to **`RAILWAY_API_URL`** (set in Vercel env; no Railway URL in config) |
-| `package.json` | Minimal project metadata (no npm deps required for the UI) |
+| `frontend/` | Vercel project root — **`public/`** is produced at build time from **`src/phase5/public`** |
+| `frontend/vercel.json` | `buildCommand`, `outputDirectory: public`, rewrites to `/api/railway/...` |
+| `frontend/package.json` | `npm run build` → `scripts/sync-public.mjs` |
+| `frontend/scripts/sync-public.mjs` | Copies `../src/phase5/public` → `frontend/public/` |
+| `frontend/api/railway/[...path].js` | Proxies to **`RAILWAY_API_URL`** (Vercel env) |
 
 ---
 
@@ -61,7 +65,7 @@ After deploy, generate a **public domain** for the service (Railway **Settings �
 
 ## 2. Vercel — static frontend + API proxy
 
-The UI is static files under `src/phase5/public`. **`vercel.json` cannot substitute environment variables into external rewrite URLs**, so the repo uses a **Node serverless function** that reads **`RAILWAY_API_URL`** and forwards traffic to Railway.
+Use the **`frontend/`** folder as the Vercel project root (**Root Directory = `frontend`**). Sources stay in **`src/phase5/public`**; **`npm run build`** copies them into **`frontend/public/`** (Vercel’s usual static layout). **`vercel.json` cannot substitute environment variables into external rewrite URLs**, so **`RAILWAY_API_URL`** is read by the serverless handler under **`frontend/api/`**.
 
 ### Vercel environment variable (required)
 
@@ -73,25 +77,27 @@ Add it under **Project → Settings → Environment Variables** (Production, and
 
 ### Project settings (dashboard)
 
-Aligned with **`vercel.json`** (you can rely on the file alone):
-
 | Setting | Value |
 |--------|--------|
-| **Framework preset** | Other |
-| **Root directory** | `.` |
-| **Build command** | *(empty)* |
-| **Output directory** | `src/phase5/public` |
+| **Root Directory** | **`frontend`** (required — this is the “frontend folder” for Vercel) |
+| **Framework preset** | Other (or leave auto; `frontend/vercel.json` sets `"framework": null`) |
+| **Build Command** | *(from `frontend/vercel.json`)* `npm run build` |
+| **Output Directory** | *(from `frontend/vercel.json`)* `public` |
+| **Install Command** | `npm install` |
 
-### What is committed
+`npm run build` copies **`src/phase5/public`** into **`frontend/public/`** so Vercel sees a standard static root (`public/index.html`, etc.). Source files stay in **`src/phase5/public`** for local Phase 6 (`/ui`).
 
-- **`vercel.json`** — `outputDirectory`, `trailingSlash: false`, and **rewrites** from `/health`, `/meta/:path*`, `/query` to **`/api/railway/...`**.
-- **`api/railway/[...path].js`** — Web `fetch` handler: builds `RAILWAY_API_URL + downstream path + query string`, forwards method, headers, and body.
+### What is committed under `frontend/`
 
-When the Railway URL changes, update **`RAILWAY_API_URL`** in Vercel only (no edit to `vercel.json`).
+- **`vercel.json`** — build/install/output **public**, **rewrites** for `/health`, `/meta/:path*`, `/query` → **`/api/railway/...`**.
+- **`api/railway/[...path].js`** — forwards to **`RAILWAY_API_URL`**.
+- **`frontend/public/`** is **not** committed (generated in CI/Vercel on each build).
+
+When the Railway URL changes, update **`RAILWAY_API_URL`** in Vercel only.
 
 ### Deploy
 
-- Connect the GitHub repo, set **`RAILWAY_API_URL`**, deploy, open the Vercel URL, and test chat + scheme picker.
+- Connect the GitHub repo, set **Root Directory** to **`frontend`**, set **`RAILWAY_API_URL`**, deploy, then test the Vercel URL.
 
 ---
 

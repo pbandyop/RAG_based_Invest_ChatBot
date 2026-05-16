@@ -1,0 +1,9 @@
+{
+  "name": "nextleap-groww-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/sync-public.mjs"
+  },
+  "description": "Vercel deploy root: copies ../src/phase5/public into public/ and serves with /api/railway proxy (deploy/HOSTING-RAILWAY-VERCEL.md)."
+}

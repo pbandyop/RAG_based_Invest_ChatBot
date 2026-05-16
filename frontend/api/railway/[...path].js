@@ -1,6 +1,6 @@
 /**
  * Proxy Phase 6 API calls to Railway. Set RAILWAY_API_URL in Vercel (HTTPS origin, no trailing slash).
- * @see deploy/HOSTING-RAILWAY-VERCEL.md
+ * @see ../../deploy/HOSTING-RAILWAY-VERCEL.md
  */
 
 const HOP_BY_HOP = new Set([

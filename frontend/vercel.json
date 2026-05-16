@@ -1,7 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "outputDirectory": "public",
   "trailingSlash": false,
-  "outputDirectory": "src/phase5/public",
   "rewrites": [
     { "source": "/health", "destination": "/api/railway/health" },
     { "source": "/meta/:path*", "destination": "/api/railway/meta/:path*" },
