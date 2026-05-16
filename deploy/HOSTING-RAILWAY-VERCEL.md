@@ -53,7 +53,7 @@ Add these under the service **Variables** tab:
 | `PHASE6_INDEX_DIR` | Only if not using default | Omit to auto-pick latest index under `data/phase2/index/` (the committed pilot bundle). Set to override, e.g. `data/phase2/index/<other_run_id>` |
 | `GROQ_API_KEY` | Recommended | From Groq console |
 | `HF_TOKEN` | Optional | Hugging Face token for Hub rate limits |
-| `PHASE6_CORS_ORIGINS` | Optional | Comma-separated origins if browsers call the **Railway URL** directly (e.g. `https://your-app.vercel.app`). Not required if all browser traffic goes through Vercel rewrites only. |
+| `PHASE6_CORS_ORIGINS` | Optional | Extra origins (comma-separated), e.g. your **custom domain** `https://chat.example.com`. **`https://*.vercel.app` is allowed by default** via regex so Preview/Production Vercel URLs work with browser-direct API calls. Set **`PHASE6_DISABLE_VERCEL_CORS_REGEX=true`** to turn that off. |
 
 **Resources:** Loading `sentence-transformers` + FAISS needs enough RAM; choose a plan / replica size that avoids OOM on first model load.
 
@@ -63,17 +63,19 @@ After deploy, generate a **public domain** for the service (Railway **Settings �
 
 ---
 
-## 2. Vercel — static frontend + API proxy
+## 2. Vercel — static frontend + API
 
-Use the **`frontend/`** folder as the Vercel project root (**Root Directory = `frontend`**). Sources stay in **`src/phase5/public`**; **`npm run build`** copies them into **`frontend/public/`** (Vercel’s usual static layout). **`vercel.json` cannot substitute environment variables into external rewrite URLs**, so **`RAILWAY_API_URL`** is read by the serverless handler under **`frontend/api/`**.
+Use the **`frontend/`** folder as the Vercel project root (**Root Directory = `frontend`**). **`npm run build`** copies **`src/phase5/public`** → **`frontend/public/`** and writes **`phase6-api-origin.js`** from **`RAILWAY_API_URL`**.
+
+**Important:** The UI calls **Railway directly** from the browser for `/query`, `/meta/*`, and `/health`. That avoids **504 / timeout** from the Vercel serverless proxy (Hobby tier often caps execution around **10s**, while RAG + LLM can take much longer). The `api/railway/*` handlers remain as a fallback but are not used when `phase6-api-origin.js` contains your Railway origin.
 
 ### Vercel environment variable (required)
 
 | Key | Value |
 |-----|--------|
-| **`RAILWAY_API_URL`** | Railway **HTTPS origin**, e.g. `https://your-service.up.railway.app` — **no trailing slash**. A **hostname only** (no `https://`) is also accepted; the proxy prepends `https://`.
+| **`RAILWAY_API_URL`** | Railway **HTTPS origin**, e.g. `https://your-service.up.railway.app` — **no trailing slash**. Hostname-only is fine. Must be set for **Production** and **Preview** (or whichever environments you deploy) so **build** can embed it in `public/phase6-api-origin.js`. Runtime-only is not enough—Vercel runs `npm run build` first.
 
-Add it under **Project → Settings → Environment Variables** (Production, and Preview if needed).
+Add it under **Project → Settings → Environment Variables** and trigger a **new deployment** after changes.
 
 ### Project settings (dashboard)
 
@@ -89,11 +91,11 @@ Add it under **Project → Settings → Environment Variables** (Production, and
 
 ### What is committed under `frontend/`
 
-- **`vercel.json`** — build/install/output **public**, **rewrites** for `/health`, `/meta/:path*`, `/query` → **`/api/railway/...`**.
-- **`api/railway/[...path].js`** — forwards to **`RAILWAY_API_URL`**.
-- **`frontend/public/`** is **not** committed (generated in CI/Vercel on each build).
+- **`vercel.json`** — build/install/output **public**; optional rewrites to **`/api/railway/...`** (fallback).
+- **`api/railway/…`** — serverless proxy to **`RAILWAY_API_URL`** if you hit same-origin API paths without browser-direct config.
+- **`frontend/public/`** is **not** committed (generated on each build, including **`phase6-api-origin.js`**).
 
-When the Railway URL changes, update **`RAILWAY_API_URL`** in Vercel only.
+When the Railway URL changes, update **`RAILWAY_API_URL`** in Vercel and **redeploy** so the static bundle picks up the new origin.
 
 ### Deploy
 
@@ -112,13 +114,15 @@ The workflow `.github/workflows/corpus_refresh.yml` builds the Phase 2 index in 
 | Check | URL / action |
 |-------|----------------|
 | API health (Railway) | `GET https://<railway-host>/health` |
-| API via Vercel proxy | `GET https://<vercel-host>/health` |
+| API via Vercel (browser) | Open site → network tab should show **`/query`** etc. going to **`https://<railway-host>/…`** (cross-origin), not only to `vercel.app`. |
 | UI | `https://<vercel-host>/` → should load `index.html` from `src/phase5/public` |
 
-If `/health` via Vercel fails, confirm **`RAILWAY_API_URL`** is set correctly in Vercel and that the Railway service is running.
+If the UI cannot reach Railway, confirm **`RAILWAY_API_URL`** is present at **build** time on Vercel, redeploy, and check the browser console for CORS errors (Railway logs should show `OPTIONS`/`GET` from your Vercel origin).
 
-### Chat returns 500 or times out
+### Chat returns 500, 504, or times out
 
-1. **Vercel function duration (common on Hobby):** Each `/query` can take **15–60+ seconds** (retrieval + Groq). The **free/hobby** tier often limits serverless execution to **~10s**, so the proxy can fail or return **500** while Railway is still working. **Fix:** upgrade the Vercel project (or plan) so **`maxDuration`** up to **60** applies, or test `/query` against Railway directly (bypass Vercel) to confirm the backend is healthy.
-2. **Railway:** In Railway → **Logs**, look for `query_engine_error`, missing **`GROQ_API_KEY`**, or OOM during embedder load. Fix env vars and redeploy Railway.
-3. **Clearer UI errors:** After redeploy, failed responses should show **FastAPI `detail`** or a short response snippet when possible.
+1. **504 on Vercel / “couldn’t complete request”:** Usually means traffic was still going through the **serverless proxy** and hit the platform time limit. **Fix:** redeploy after this repo’s browser-direct change; confirm requests target **Railway** in DevTools → Network. Ensure **`RAILWAY_API_URL`** is set for the environment that runs **`npm run build`**.
+2. **Vercel Hobby `maxDuration`:** Still applies only to **`/api/railway/*`** if you use the proxy; it does not limit the browser’s direct `fetch` to Railway.
+3. **Railway:** In Railway → **Logs**, look for `query_engine_error`, missing **`GROQ_API_KEY`**, or OOM during embedder load. Fix env vars and redeploy Railway.
+4. **Custom domain on Vercel:** Add that origin to **`PHASE6_CORS_ORIGINS`** on Railway (the default regex only matches `*.vercel.app`).
+5. **Clearer UI errors:** Failed responses should show **FastAPI `detail`** or a short response snippet when possible.

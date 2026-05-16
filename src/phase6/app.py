@@ -111,13 +111,24 @@ def create_app() -> FastAPI:
     raw_cors = os.environ.get("PHASE6_CORS_ORIGINS", "").strip()
     if raw_cors:
         cors = [o.strip() for o in raw_cors.split(",") if o.strip()]
-    if cors:
+
+    # Browsers on Vercel call Railway directly (avoids serverless 504 on long /query). *.vercel.app is allowed unless disabled.
+    cors_regex = os.environ.get("PHASE6_CORS_ORIGIN_REGEX", "").strip()
+    if not cors_regex and os.environ.get("PHASE6_DISABLE_VERCEL_CORS_REGEX", "").strip().lower() not in (
+        "1",
+        "true",
+        "yes",
+    ):
+        cors_regex = r"https://.*\.vercel\.app"
+
+    if cors or cors_regex:
         app.add_middleware(
             CORSMiddleware,
             allow_origins=cors,
             allow_credentials=False,
             allow_methods=["GET", "POST"],
             allow_headers=["*"],
+            **({"allow_origin_regex": cors_regex} if cors_regex else {}),
         )
 
     @app.get("/health")

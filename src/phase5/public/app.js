@@ -12,8 +12,26 @@ const SVG_BOT = `<svg class="h-5 w-5 text-primary-fixed-dim" fill="none" stroke=
 
 const SVG_USER = `<svg class="h-5 w-5 text-primary-fixed-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>`;
 
+/**
+ * API base: same origin locally (`Phase 6` + `/ui`). On Vercel, `phase6-api-origin.js` sets Railway so long `/query` calls are not limited by serverless timeouts (504).
+ * @param {string} path absolute path e.g. `/query`
+ */
 function apiUrl(path) {
-  return new URL(path, window.location.origin).toString();
+  let base = window.location.origin;
+  try {
+    const o = window.__PHASE6_API_ORIGIN__;
+    if (o != null && String(o).trim() !== "") {
+      let s = String(o).trim().replace(/\/+$/, "");
+      if (!/^https?:\/\//i.test(s)) {
+        s = `https://${s}`;
+      }
+      base = s;
+    }
+  } catch {
+    /* ignore */
+  }
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return new URL(p, `${base}/`).toString();
 }
 
 /** Best-effort message from FastAPI / proxy JSON error bodies */
