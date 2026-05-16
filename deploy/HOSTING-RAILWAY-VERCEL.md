@@ -71,7 +71,7 @@ Use the **`frontend/`** folder as the Vercel project root (**Root Directory = `f
 
 | Key | Value |
 |-----|--------|
-| **`RAILWAY_API_URL`** | Railway **HTTPS origin only**, e.g. `https://your-service.up.railway.app` — **no trailing slash** |
+| **`RAILWAY_API_URL`** | Railway **HTTPS origin**, e.g. `https://your-service.up.railway.app` — **no trailing slash**. A **hostname only** (no `https://`) is also accepted; the proxy prepends `https://`.
 
 Add it under **Project → Settings → Environment Variables** (Production, and Preview if needed).
 
