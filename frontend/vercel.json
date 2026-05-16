@@ -12,6 +12,8 @@
   },
   "rewrites": [
     { "source": "/health", "destination": "/api/railway/health" },
+    { "source": "/meta/disclaimer", "destination": "/api/railway/meta/disclaimer" },
+    { "source": "/meta/schemes", "destination": "/api/railway/meta/schemes" },
     { "source": "/meta/:path*", "destination": "/api/railway/meta/:path*" },
     { "source": "/query", "destination": "/api/railway/query" }
   ]
