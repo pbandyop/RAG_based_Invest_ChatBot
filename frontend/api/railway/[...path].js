@@ -44,6 +44,67 @@ function forwardHeader(name) {
   return true;
 }
 
+/**
+ * Vercel Node serverless may pass `IncomingMessage` (plain `headers` object). Web `Request` uses `Headers`.
+ *
+ * @param {Request | import("http").IncomingMessage} req
+ * @param {string} name
+ * @returns {string | undefined}
+ */
+function headerGet(req, name) {
+  const h = req.headers;
+  if (!h) return undefined;
+  const k = name.toLowerCase();
+  if (typeof h.get === "function") {
+    return h.get(name) ?? h.get(k) ?? undefined;
+  }
+  const v = /** @type {Record<string, string | string[] | undefined>} */ (h)[k];
+  if (v === undefined) return undefined;
+  return Array.isArray(v) ? v[0] : v;
+}
+
+/**
+ * @param {Request | import("http").IncomingMessage} req
+ * @param {(key: string, value: string) => void} fn
+ */
+function forEachRequestHeader(req, fn) {
+  const h = req.headers;
+  if (!h) return;
+  if (typeof h.forEach === "function") {
+    h.forEach((value, key) => fn(key, value));
+    return;
+  }
+  for (const key of Object.keys(h)) {
+    const v = /** @type {Record<string, string | string[] | undefined>} */ (h)[key];
+    if (v === undefined) continue;
+    if (Array.isArray(v)) {
+      for (const part of v) fn(key, String(part));
+    } else {
+      fn(key, String(v));
+    }
+  }
+}
+
+/**
+ * @param {Request | import("http").IncomingMessage} req
+ * @returns {Promise<ArrayBuffer | undefined>}
+ */
+async function readUpstreamRequestBody(req) {
+  if (typeof req.arrayBuffer === "function") {
+    const buf = await req.arrayBuffer();
+    return buf.byteLength > 0 ? buf : undefined;
+  }
+  /** @type {import("http").IncomingMessage} */
+  const nodeReq = /** @type {import("http").IncomingMessage} */ (req);
+  const chunks = [];
+  for await (const chunk of nodeReq) {
+    chunks.push(chunk);
+  }
+  const buf = Buffer.concat(chunks);
+  if (buf.byteLength === 0) return undefined;
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+}
+
 function stripResponseHopByHop(headers) {
   const out = new Headers();
   headers.forEach((value, key) => {
@@ -57,7 +118,7 @@ function stripResponseHopByHop(headers) {
  * Vercel often passes `request.url` as a path + query only (no origin). `new URL` needs a base in that case.
  * Catch-all routing may add a `...path` query param; do not forward that to Railway.
  *
- * @param {Request} request
+ * @param {Request | import("http").IncomingMessage} request
  * @returns {URL}
  */
 function incomingUrl(request) {
@@ -66,11 +127,11 @@ function incomingUrl(request) {
     return new URL(raw);
   }
   const host =
-    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
-    request.headers.get("host") ||
+    headerGet(request, "x-forwarded-host")?.split(",")[0]?.trim() ||
+    headerGet(request, "host") ||
     "localhost";
   const proto =
-    (request.headers.get("x-forwarded-proto") || "https").split(",")[0].trim() || "https";
+    (headerGet(request, "x-forwarded-proto") || "https").split(",")[0].trim() || "https";
   return new URL(raw, `${proto}://${host}`);
 }
 
@@ -102,7 +163,7 @@ function downstreamPathFromRequest(u) {
 }
 
 /**
- * @param {Request} request
+ * @param {Request | import("http").IncomingMessage} request
  */
 export default async function railwayProxy(request) {
   const baseRaw = process.env.RAILWAY_API_URL;
@@ -142,21 +203,21 @@ export default async function railwayProxy(request) {
   const target = `${base}${downstreamPath}${upstreamSearch(u.searchParams)}`;
 
   const headers = new Headers();
-  request.headers.forEach((value, key) => {
+  forEachRequestHeader(request, (key, value) => {
     if (!forwardHeader(key)) return;
     headers.set(key, value);
   });
 
   /** @type {ArrayBuffer | undefined} */
   let body;
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    const buf = await request.arrayBuffer();
-    body = buf.byteLength > 0 ? buf : undefined;
+  const method = String(request.method || "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD") {
+    body = await readUpstreamRequestBody(request);
   }
 
   let upstream;
   try {
-    upstream = await fetch(target, { method: request.method, headers, body });
+    upstream = await fetch(target, { method, headers, body });
   } catch (e) {
     const msg = e && typeof e === "object" && "message" in e ? String(e.message) : String(e);
     console.error("railway-proxy fetch error", { target, msg });
