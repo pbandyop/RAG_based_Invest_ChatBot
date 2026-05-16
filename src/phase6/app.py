@@ -133,6 +133,11 @@ def create_app() -> FastAPI:
             },
         }
 
+    @app.get("/ui/health")
+    def ui_health_redirect() -> RedirectResponse:
+        """`/ui/` serves static assets only; API health is at `/health`."""
+        return RedirectResponse(url="/health", status_code=307)
+
     @app.get("/version")
     def version() -> dict[str, str]:
         return {"api": "1.0.0", "phase": "phase6-pilot"}
