@@ -53,7 +53,7 @@ Add these under the service **Variables** tab:
 | `PHASE6_INDEX_DIR` | Only if not using default | Omit to auto-pick latest index under `data/phase2/index/` (the committed pilot bundle). Set to override, e.g. `data/phase2/index/<other_run_id>` |
 | `GROQ_API_KEY` | Recommended | From Groq console |
 | `HF_TOKEN` | Optional | Hugging Face token for Hub rate limits |
-| `PHASE6_CORS_ORIGINS` | Optional | Extra origins (comma-separated), e.g. your **custom domain** `https://chat.example.com`. **`https://*.vercel.app` is allowed by default** via regex so Preview/Production Vercel URLs work with browser-direct API calls. Set **`PHASE6_DISABLE_VERCEL_CORS_REGEX=true`** to turn that off. |
+| `PHASE6_CORS_ORIGINS` | Unused (reserved) | CORS is **`Access-Control-Allow-Origin: *`** for this API (no browser credentials). |
 
 **Resources:** Loading `sentence-transformers` + FAISS needs enough RAM; choose a plan / replica size that avoids OOM on first model load.
 
@@ -124,5 +124,5 @@ If the UI cannot reach Railway, confirm **`RAILWAY_API_URL`** is present at **bu
 1. **504 on Vercel / “couldn’t complete request”:** Usually means traffic was still going through the **serverless proxy** and hit the platform time limit. **Fix:** redeploy after this repo’s browser-direct change; confirm requests target **Railway** in DevTools → Network. Ensure **`RAILWAY_API_URL`** is set for the environment that runs **`npm run build`**.
 2. **Vercel Hobby `maxDuration`:** Still applies only to **`/api/railway/*`** if you use the proxy; it does not limit the browser’s direct `fetch` to Railway.
 3. **Railway:** In Railway → **Logs**, look for `query_engine_error`, missing **`GROQ_API_KEY`**, or OOM during embedder load. Fix env vars and redeploy Railway.
-4. **Custom domain on Vercel:** Add that origin to **`PHASE6_CORS_ORIGINS`** on Railway (the default regex only matches `*.vercel.app`).
+4. **Custom domain on Vercel:** No extra Railway env needed for CORS (wildcard). If you lock CORS down later, change `CORSMiddleware` in `src/phase6/app.py`.
 5. **Clearer UI errors:** Failed responses should show **FastAPI `detail`** or a short response snippet when possible.
