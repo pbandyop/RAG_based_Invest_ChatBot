@@ -1,4 +1,5 @@
 # Mutual Fund FAQ Assistant (Groww HDFC pilot)
+Check out the online app at https://rag-based-invest-chat-bot-ec6i.vercel.app/ (Frontend is deployed in Vercel, backend is deployed in Railway. Groq (llama-3.3-70b-versatile) a light weight model is used as I wanted something free. The whole application is developed using Cursor.
 
 ## Environment variables
 
