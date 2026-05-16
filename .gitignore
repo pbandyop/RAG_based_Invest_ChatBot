@@ -12,6 +12,9 @@ data/phase2/index/*
 !data/phase2/index/.gitkeep
 !data/phase2/index/groww-hdfc-pilot-v1__422a8bf8c13836c8/
 !data/phase2/index/groww-hdfc-pilot-v1__422a8bf8c13836c8/**
+# Node (Vercel proxy only; no lockfile yet)
+node_modules/
+
 # Python
 __pycache__/
 *.py[cod]

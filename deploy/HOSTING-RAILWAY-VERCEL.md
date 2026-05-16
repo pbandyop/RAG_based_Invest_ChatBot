@@ -1,6 +1,6 @@
 # Hosting: Railway (backend API) + Vercel (static frontend)
 
-Phase 6 is one FastAPI app (`src/phase6`) that can serve both API routes and the Phase 5 UI. For a split deployment, **Railway runs the Python API** (you can still open `/ui` on the Railway URL for debugging), while **Vercel serves only** `src/phase5/public`. The browser talks to your Vercel origin; **Vercel rewrites** proxy `/query`, `/meta/*`, and `/health` to Railway so `app.js` can keep using same-origin URLs (`apiUrl` uses `window.location.origin`).
+Phase 6 is one FastAPI app (`src/phase6`) that can serve both API routes and the Phase 5 UI. For a split deployment, **Railway runs the Python API** (you can still open `/ui` on the Railway URL for debugging), while **Vercel serves** `src/phase5/public`. The browser talks to your Vercel origin; **rewrites** send `/query`, `/meta/*`, and `/health` to a **serverless proxy** (`api/railway/[...path].js`) that forwards to **`RAILWAY_API_URL`**, so `app.js` can keep using same-origin URLs (`apiUrl` uses `window.location.origin`).
 
 ## Prerequisites
 
@@ -18,6 +18,14 @@ Phase 6 is one FastAPI app (`src/phase6`) that can serve both API routes and the
 | `requirements.txt` | Nixpacks install phase runs `pip install -r requirements.txt` |
 | `data/phase2/index/groww-hdfc-pilot-v1__422a8bf8c13836c8/` | Committed FAISS bundle (`manifest.json`, `index.faiss`, …) for deploy |
 | `scripts/run_phase6_server.py` | Binds `0.0.0.0:$PORT` when Railway sets `PORT` |
+
+### Repo files used by Vercel (frontend)
+
+| File | Role |
+|------|------|
+| `vercel.json` | `outputDirectory` → `src/phase5/public`; rewrites API paths to `/api/railway/...` |
+| `api/railway/[...path].js` | Proxies to **`RAILWAY_API_URL`** (set in Vercel env; no Railway URL in config) |
+| `package.json` | Minimal project metadata (no npm deps required for the UI) |
 
 ---
 
@@ -51,48 +59,39 @@ After deploy, generate a **public domain** for the service (Railway **Settings �
 
 ---
 
-## 2. Vercel — static frontend
+## 2. Vercel — static frontend + API proxy
 
-**Project settings**
+The UI is static files under `src/phase5/public`. **`vercel.json` cannot substitute environment variables into external rewrite URLs**, so the repo uses a **Node serverless function** that reads **`RAILWAY_API_URL`** and forwards traffic to Railway.
+
+### Vercel environment variable (required)
+
+| Key | Value |
+|-----|--------|
+| **`RAILWAY_API_URL`** | Railway **HTTPS origin only**, e.g. `https://your-service.up.railway.app` — **no trailing slash** |
+
+Add it under **Project → Settings → Environment Variables** (Production, and Preview if needed).
+
+### Project settings (dashboard)
+
+Aligned with **`vercel.json`** (you can rely on the file alone):
 
 | Setting | Value |
 |--------|--------|
 | **Framework preset** | Other |
-| **Root directory** | `.` (repository root) |
-| **Build command** | *(leave empty)* or `echo "static"` |
+| **Root directory** | `.` |
+| **Build command** | *(empty)* |
 | **Output directory** | `src/phase5/public` |
 
-Add a `vercel.json` at the **repository root** (see below). Replace `https://YOUR-RAILWAY-SERVICE.up.railway.app` with your Railway **HTTPS** base URL (no trailing slash).
+### What is committed
 
-### `vercel.json` (root of repo)
+- **`vercel.json`** — `outputDirectory`, `trailingSlash: false`, and **rewrites** from `/health`, `/meta/:path*`, `/query` to **`/api/railway/...`**.
+- **`api/railway/[...path].js`** — Web `fetch` handler: builds `RAILWAY_API_URL + downstream path + query string`, forwards method, headers, and body.
 
-```json
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "trailingSlash": false,
-  "rewrites": [
-    {
-      "source": "/health",
-      "destination": "https://YOUR-RAILWAY-SERVICE.up.railway.app/health"
-    },
-    {
-      "source": "/meta/:path*",
-      "destination": "https://YOUR-RAILWAY-SERVICE.up.railway.app/meta/:path*"
-    },
-    {
-      "source": "/query",
-      "destination": "https://YOUR-RAILWAY-SERVICE.up.railway.app/query"
-    }
-  ]
-}
-```
-
-These rewrites keep the browser on the Vercel origin while proxying API traffic to Railway (POST bodies included).
+When the Railway URL changes, update **`RAILWAY_API_URL`** in Vercel only (no edit to `vercel.json`).
 
 ### Deploy
 
-- Connect the repo in Vercel and deploy; open the production URL and exercise chat + scheme list.
-- If you change the Railway URL, update `vercel.json` and redeploy.
+- Connect the GitHub repo, set **`RAILWAY_API_URL`**, deploy, open the Vercel URL, and test chat + scheme picker.
 
 ---
 
@@ -110,4 +109,4 @@ The workflow `.github/workflows/corpus_refresh.yml` builds the Phase 2 index in 
 | API via Vercel proxy | `GET https://<vercel-host>/health` |
 | UI | `https://<vercel-host>/` → should load `index.html` from `src/phase5/public` |
 
-If `/health` via Vercel fails, confirm rewrites match your Railway URL and that the Railway service is running.
+If `/health` via Vercel fails, confirm **`RAILWAY_API_URL`** is set correctly in Vercel and that the Railway service is running.

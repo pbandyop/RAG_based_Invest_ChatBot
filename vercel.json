@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "trailingSlash": false,
+  "outputDirectory": "src/phase5/public",
+  "rewrites": [
+    { "source": "/health", "destination": "/api/railway/health" },
+    { "source": "/meta/:path*", "destination": "/api/railway/meta/:path*" },
+    { "source": "/query", "destination": "/api/railway/query" }
+  ]
+}

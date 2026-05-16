@@ -1,0 +1,5 @@
+{
+  "name": "nextleap-groww",
+  "private": true,
+  "description": "Vercel hosts src/phase5/public; /api/railway proxies to RAILWAY_API_URL (see deploy/HOSTING-RAILWAY-VERCEL.md)."
+}
