@@ -116,3 +116,9 @@ The workflow `.github/workflows/corpus_refresh.yml` builds the Phase 2 index in 
 | UI | `https://<vercel-host>/` → should load `index.html` from `src/phase5/public` |
 
 If `/health` via Vercel fails, confirm **`RAILWAY_API_URL`** is set correctly in Vercel and that the Railway service is running.
+
+### Chat returns 500 or times out
+
+1. **Vercel function duration (common on Hobby):** Each `/query` can take **15–60+ seconds** (retrieval + Groq). The **free/hobby** tier often limits serverless execution to **~10s**, so the proxy can fail or return **500** while Railway is still working. **Fix:** upgrade the Vercel project (or plan) so **`maxDuration`** up to **60** applies, or test `/query` against Railway directly (bypass Vercel) to confirm the backend is healthy.
+2. **Railway:** In Railway → **Logs**, look for `query_engine_error`, missing **`GROQ_API_KEY`**, or OOM during embedder load. Fix env vars and redeploy Railway.
+3. **Clearer UI errors:** After redeploy, failed responses should show **FastAPI `detail`** or a short response snippet when possible.

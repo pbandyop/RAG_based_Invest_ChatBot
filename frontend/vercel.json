@@ -5,6 +5,11 @@
   "buildCommand": "npm run build",
   "outputDirectory": "public",
   "trailingSlash": false,
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
     { "source": "/health", "destination": "/api/railway/health" },
     { "source": "/meta/:path*", "destination": "/api/railway/meta/:path*" },

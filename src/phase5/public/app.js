@@ -16,6 +16,25 @@ function apiUrl(path) {
   return new URL(path, window.location.origin).toString();
 }
 
+/** Best-effort message from FastAPI / proxy JSON error bodies */
+function formatApiErrorPayload(data, status, rawText) {
+  if (data && typeof data === "object") {
+    const d = data.detail;
+    if (typeof d === "string" && d.trim()) return d;
+    if (Array.isArray(d) && d.length) {
+      const parts = d.map((x) =>
+        typeof x === "object" && x !== null && "msg" in x ? String(x.msg) : JSON.stringify(x),
+      );
+      return parts.join("; ");
+    }
+    if (data.message && String(data.message).trim()) return String(data.message);
+    if (data.error && String(data.error).trim()) return String(data.error);
+  }
+  const snippet = (rawText || "").trim().slice(0, 400);
+  if (snippet) return `Request failed (${status}): ${snippet}`;
+  return `Request failed (${status})`;
+}
+
 function setStatus(el, text, isError) {
   el.textContent = text;
   el.classList.toggle("error", Boolean(isError));
@@ -682,7 +701,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       removeNode(loadingEl);
       if (!r.ok) {
-        throw new Error(data.detail || data.message || `Request failed (${r.status})`);
+        throw new Error(formatApiErrorPayload(data, r.status, text));
       }
       appendAssistantResponse(thread, data);
       scrollChatToBottom();
