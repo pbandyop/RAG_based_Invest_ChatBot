@@ -1,10 +1,19 @@
 # Scheduled + manual corpus refresh: Phase 1 (P1-S6 = S1→S5) + Phase 2 index build.
-# See docs/phase-wise-architecture.md §9.5.
+# Scheduled runs commit the index bundle to main → Railway redeploys from GitHub.
+# See docs/phase-wise-architecture.md §9.5 and deploy/HOSTING-RAILWAY-VERCEL.md §3.
 # Local parity (no artifacts): python scripts/run_corpus_refresh_local.py
 name: Corpus refresh
 
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
+    inputs:
+      publish_to_railway:
+        description: Commit index to main and push (triggers Railway deploy)
+        type: boolean
+        default: false
   schedule:
     # Daily 4:00 AM Pacific (America/Los_Angeles; DST-aware). Cadence per robots / policy (architecture §9.5).
     - cron: "0 4 * * *"
@@ -25,6 +34,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -60,3 +71,17 @@ jobs:
             data/phase1/crawl_plans/
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Publish index to Railway (commit + push main)
+        if: >
+          github.ref == 'refs/heads/main' &&
+          (
+            github.event_name == 'schedule' ||
+            (github.event_name == 'workflow_dispatch' && inputs.publish_to_railway == true)
+          )
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python scripts/ci_commit_phase2_index.py

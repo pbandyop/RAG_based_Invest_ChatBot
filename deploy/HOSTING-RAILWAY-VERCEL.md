@@ -103,9 +103,25 @@ When the Railway URL changes, update **`RAILWAY_API_URL`** in Vercel and **redep
 
 ---
 
-## 3. GitHub Actions alignment
+## 3. GitHub Actions — corpus refresh → Railway
 
-The workflow `.github/workflows/corpus_refresh.yml` builds the Phase 2 index in CI and uploads artifacts; it does **not** auto-push to Railway/Vercel. Typical pattern: download the latest `phase2-index-*` artifact from a successful run, extract under `data/phase2/index/` before deploy, or run ingestion/index in a Railway build step if you accept the time and cost.
+The workflow [`.github/workflows/corpus_refresh.yml`](../.github/workflows/corpus_refresh.yml) runs **daily 4:00 AM Pacific** (and on manual **`workflow_dispatch`**):
+
+1. Phase 1 ingest (`run_s6_pipeline.py --overwrite`) → Groww fetch + normalize  
+2. Phase 2 index (`run_phase2_build_index.py --overwrite`) → FAISS bundle under `data/phase2/index/<run_id>/`  
+3. Uploads CI **artifacts** (7–14 day retention)  
+4. **Scheduled runs on `main`:** commits the refreshed index bundle and **pushes to `main`** via `scripts/ci_commit_phase2_index.py` → **Railway redeploys** from GitHub (same as any other push to the connected repo).
+
+| Trigger | Push index to `main` / Railway |
+|--------|--------------------------------|
+| **`schedule` (cron)** on `main` | **Yes** (automatic) |
+| **`workflow_dispatch`** | Only if you enable **“Commit index to main and push”** (`publish_to_railway`) |
+
+**Requirements:** `GITHUB_TOKEN` needs **`contents: write`** (set in the workflow). If **`main` is branch-protected**, allow **GitHub Actions** to push or the publish step will fail.
+
+**Vercel** is unchanged by corpus refresh (static UI only). **`RAILWAY_API_URL`** on Vercel does not need updating when the Railway service redeploys the same hostname.
+
+Local parity without push: `python scripts/run_corpus_refresh_local.py`
 
 ---
 

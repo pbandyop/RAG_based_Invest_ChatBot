@@ -329,7 +329,7 @@ For **repeatable “latest data”** without a human shell, use **GitHub Actions
 | **Where outputs go** | **Do not assume** large `data/` trees belong in git. Prefer **`actions/upload-artifact`**, a release asset, or **object storage** (S3, GCS, Azure Blob) keyed by `run_id` / commit / date. Keep **artifact retention** short unless compliance requires longer archival. |
 | **Runtime** | Phase 2 (torch + `sentence-transformers` + FAISS) is **CPU-heavy** and may **download models** on cold runners; set a generous **`timeout-minutes`** and enable **pip / Hugging Face caching** between runs. |
 | **Compliance** | Respect **robots.txt** and manifest allowlists in production; treat **`--skip-robots` / `--insecure-ssl`** as **dev-only** (see Phase 1 notes in this doc). If CI egress to `groww.in` is disallowed, run the job on an approved runner or substitute a manual refresh process. |
-| **Implementation reference** | Repo template: [`.github/workflows/corpus_refresh.yml`](../.github/workflows/corpus_refresh.yml) (`workflow_dispatch` + weekly cron). Adjust branches, secrets, and artifact publishing to your environment. |
+| **Implementation reference** | [`.github/workflows/corpus_refresh.yml`](../.github/workflows/corpus_refresh.yml) (daily cron + `workflow_dispatch`). **Scheduled runs** commit the pilot Phase 2 bundle to `main` so **Railway** redeploys from GitHub; see [deploy/HOSTING-RAILWAY-VERCEL.md](../deploy/HOSTING-RAILWAY-VERCEL.md) §3. CI artifacts remain optional backups. |
 
 ---
 
