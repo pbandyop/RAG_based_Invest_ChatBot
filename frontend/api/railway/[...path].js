@@ -2,6 +2,9 @@
  * Proxy Phase 6 API calls to Railway. Set RAILWAY_API_URL in Vercel (HTTPS origin preferred, no trailing slash).
  * Hostname-only values (e.g. `my-app.up.railway.app`) are normalized to `https://…`.
  * @see ../../deploy/HOSTING-RAILWAY-VERCEL.md
+ *
+ * Vercel may invoke this with a Web `Request`, Node `IncomingMessage`, or other shapes; `headers` is not always a `Headers` instance with `.get()`.
+ * We normalize headers to a plain object and never call `.get` on the incoming `headers` object.
  */
 
 /** Serverless wait for Railway (RAG + LLM often > 10s). Hobby plan caps at 10s; Pro can use 60. */
@@ -45,93 +48,60 @@ function forwardHeader(name) {
 }
 
 /**
- * Vercel Node serverless may pass `IncomingMessage` (plain `headers` object). Web `Request` uses `Headers`.
+ * Flatten inbound headers to lowercase keys → single string (join duplicate Node values with ", ").
+ * Avoids `headers.get` / `instanceof Headers` pitfalls across Vercel runtimes.
  *
- * @param {Request | import("http").IncomingMessage} req
- * @param {string} name
- * @returns {string | undefined}
+ * @param {Request | import("http").IncomingMessage | { headers?: unknown }} req
+ * @returns {Record<string, string>}
  */
-function headerGet(req, name) {
-  const h = req.headers;
-  if (!h) return undefined;
-  const k = name.toLowerCase();
-  if (typeof h.get === "function") {
-    return h.get(name) ?? h.get(k) ?? undefined;
-  }
-  const v = /** @type {Record<string, string | string[] | undefined>} */ (h)[k];
-  if (v === undefined) return undefined;
-  return Array.isArray(v) ? v[0] : v;
-}
+function buildHeaderRecord(req) {
+  /** @type {Record<string, string>} */
+  const o = {};
+  const h = req && req.headers;
+  if (h == null) return o;
 
-/**
- * @param {Request | import("http").IncomingMessage} req
- * @param {(key: string, value: string) => void} fn
- */
-function forEachRequestHeader(req, fn) {
-  const h = req.headers;
-  if (!h) return;
-  if (typeof h.forEach === "function") {
-    h.forEach((value, key) => fn(key, value));
-    return;
-  }
-  for (const key of Object.keys(h)) {
-    const v = /** @type {Record<string, string | string[] | undefined>} */ (h)[key];
-    if (v === undefined) continue;
-    if (Array.isArray(v)) {
-      for (const part of v) fn(key, String(part));
-    } else {
-      fn(key, String(v));
+  if (!Array.isArray(h) && typeof h.forEach === "function") {
+    try {
+      h.forEach((value, key) => {
+        const k = String(key).toLowerCase();
+        const v = String(value);
+        o[k] = o[k] ? `${o[k]}, ${v}` : v;
+      });
+      return o;
+    } catch {
+      /* fall through to object copy */
     }
   }
+
+  if (typeof h === "object" && !Array.isArray(h)) {
+    for (const key of Object.keys(h)) {
+      const v = /** @type {Record<string, string | string[] | undefined>} */ (h)[key];
+      if (v === undefined) continue;
+      const k = String(key).toLowerCase();
+      const s = Array.isArray(v) ? v.map(String).join(", ") : String(v);
+      o[k] = o[k] ? `${o[k]}, ${s}` : s;
+    }
+  }
+
+  return o;
 }
 
 /**
- * @param {Request | import("http").IncomingMessage} req
- * @returns {Promise<ArrayBuffer | undefined>}
- */
-async function readUpstreamRequestBody(req) {
-  if (typeof req.arrayBuffer === "function") {
-    const buf = await req.arrayBuffer();
-    return buf.byteLength > 0 ? buf : undefined;
-  }
-  /** @type {import("http").IncomingMessage} */
-  const nodeReq = /** @type {import("http").IncomingMessage} */ (req);
-  const chunks = [];
-  for await (const chunk of nodeReq) {
-    chunks.push(chunk);
-  }
-  const buf = Buffer.concat(chunks);
-  if (buf.byteLength === 0) return undefined;
-  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
-}
-
-function stripResponseHopByHop(headers) {
-  const out = new Headers();
-  headers.forEach((value, key) => {
-    if (HOP_BY_HOP.has(key.toLowerCase())) return;
-    out.append(key, value);
-  });
-  return out;
-}
-
-/**
- * Vercel often passes `request.url` as a path + query only (no origin). `new URL` needs a base in that case.
- * Catch-all routing may add a `...path` query param; do not forward that to Railway.
- *
- * @param {Request | import("http").IncomingMessage} request
+ * @param {string} pathAndQuery
+ * @param {Record<string, string>} headerRecord
  * @returns {URL}
  */
-function incomingUrl(request) {
-  const raw = request.url || "/";
+function incomingUrl(pathAndQuery, headerRecord) {
+  const raw = pathAndQuery || "/";
   if (typeof raw === "string" && /^https?:\/\//i.test(raw)) {
     return new URL(raw);
   }
   const host =
-    headerGet(request, "x-forwarded-host")?.split(",")[0]?.trim() ||
-    headerGet(request, "host") ||
+    headerRecord["x-forwarded-host"]?.split(",")[0]?.trim() ||
+    headerRecord["host"] ||
     "localhost";
   const proto =
-    (headerGet(request, "x-forwarded-proto") || "https").split(",")[0].trim() || "https";
+    (headerRecord["x-forwarded-proto"] || "https").split(",")[0].trim() || "https";
   return new URL(raw, `${proto}://${host}`);
 }
 
@@ -147,8 +117,6 @@ function upstreamSearch(searchParams) {
 }
 
 /**
- * Public routes are rewritten to `/api/railway/...`, but `request.url` may still look like `/query` with only a path.
- *
  * @param {URL} u
  * @returns {string} path on Railway (starts with `/`)
  */
@@ -162,8 +130,36 @@ function downstreamPathFromRequest(u) {
   return p.startsWith("/") ? p : `/${p}`;
 }
 
+function stripResponseHopByHop(headers) {
+  const out = new Headers();
+  headers.forEach((value, key) => {
+    if (HOP_BY_HOP.has(key.toLowerCase())) return;
+    out.append(key, value);
+  });
+  return out;
+}
+
 /**
- * @param {Request | import("http").IncomingMessage} request
+ * @param {Request | import("http").IncomingMessage | { headers?: unknown; url?: string; method?: string }} req
+ * @returns {Promise<ArrayBuffer | undefined>}
+ */
+async function readUpstreamRequestBody(req) {
+  if (typeof req.arrayBuffer === "function") {
+    const buf = await req.arrayBuffer();
+    return buf.byteLength > 0 ? buf : undefined;
+  }
+  const nodeReq = /** @type {import("http").IncomingMessage} */ (req);
+  const chunks = [];
+  for await (const chunk of nodeReq) {
+    chunks.push(chunk);
+  }
+  const buf = Buffer.concat(chunks);
+  if (buf.byteLength === 0) return undefined;
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+}
+
+/**
+ * @param {Request | import("http").IncomingMessage | { headers?: unknown; url?: string; method?: string }} request
  */
 export default async function railwayProxy(request) {
   const baseRaw = process.env.RAILWAY_API_URL;
@@ -179,7 +175,6 @@ export default async function railwayProxy(request) {
 
   const base = normalizeRailwayBase(baseRaw);
   try {
-    // Reject junk values early so fetch never uses a malformed URL.
     new URL(base);
   } catch {
     return Response.json(
@@ -190,12 +185,16 @@ export default async function railwayProxy(request) {
       { status: 502 },
     );
   }
+
+  const headerRecord = buildHeaderRecord(request);
+  const pathAndQuery = (request && request.url) || "/";
+
   let u;
   try {
-    u = incomingUrl(request);
+    u = incomingUrl(pathAndQuery, headerRecord);
   } catch (e) {
     const msg = e && typeof e === "object" && "message" in e ? String(e.message) : String(e);
-    console.error("railway-proxy invalid request.url", { raw: request.url, msg });
+    console.error("railway-proxy invalid request.url", { raw: pathAndQuery, msg });
     return Response.json({ error: "Invalid request URL", detail: msg }, { status: 500 });
   }
 
@@ -203,14 +202,14 @@ export default async function railwayProxy(request) {
   const target = `${base}${downstreamPath}${upstreamSearch(u.searchParams)}`;
 
   const headers = new Headers();
-  forEachRequestHeader(request, (key, value) => {
-    if (!forwardHeader(key)) return;
+  for (const [key, value] of Object.entries(headerRecord)) {
+    if (!forwardHeader(key)) continue;
     headers.set(key, value);
-  });
+  }
 
   /** @type {ArrayBuffer | undefined} */
   let body;
-  const method = String(request.method || "GET").toUpperCase();
+  const method = String((request && request.method) || "GET").toUpperCase();
   if (method !== "GET" && method !== "HEAD") {
     body = await readUpstreamRequestBody(request);
   }
