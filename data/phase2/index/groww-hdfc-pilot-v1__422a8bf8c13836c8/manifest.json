@@ -1,15 +1,15 @@
 {
   "phase": "P2",
-  "built_at_utc": "2026-05-15T22:25:16.831138+00:00",
+  "built_at_utc": "2026-05-17T12:06:57.957044+00:00",
   "embedding_model": "BAAI/bge-small-en-v1.5",
   "max_chunk_tokens": 480,
   "overlap_tokens": 80,
   "min_chunk_chars": 32,
-  "normalized_source_dir": "C:\\Users\\payel\\OneDrive\\Documents\\NextLeap_AI_Projects\\NextLeap_Groww\\data\\phase1\\normalized\\groww-hdfc-pilot-v1__422a8bf8c13836c8",
-  "index_out_dir": "C:\\Users\\payel\\OneDrive\\Documents\\NextLeap_AI_Projects\\NextLeap_Groww\\data\\phase2\\index\\groww-hdfc-pilot-v1__422a8bf8c13836c8",
-  "chunk_count": 1692,
+  "normalized_source_dir": "/home/runner/work/RAG_based_Invest_ChatBot/RAG_based_Invest_ChatBot/data/phase1/normalized/groww-hdfc-pilot-v1__422a8bf8c13836c8",
+  "index_out_dir": "/home/runner/work/RAG_based_Invest_ChatBot/RAG_based_Invest_ChatBot/data/phase2/index/groww-hdfc-pilot-v1__422a8bf8c13836c8",
+  "chunk_count": 1693,
   "vector_dim": 384,
   "faiss_index_type": "IndexFlatIP",
   "embedding_normalize": true,
-  "chunk_fingerprint_sha256": "70e31452b1e0295b91daa8cf83db5429eef1e02ced789795efbc788edf459305"
+  "chunk_fingerprint_sha256": "29ff301e349d9b3ad6feabc8a398972c7cda6d7cbd299a10971c17315d99d031"
 }
