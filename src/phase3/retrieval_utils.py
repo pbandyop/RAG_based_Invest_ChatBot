@@ -65,6 +65,57 @@ def hit_evidence_record(hit: SearchHit) -> dict[str, Any]:
     }
 
 
+_PILOT_MF_SCOPE_RE = re.compile(
+    r"\b("
+    r"nav|n\.a\.v\.|expense\s+ratio|exit\s+load|lock[- ]?in|"
+    r"minimum\s+sip|min(?:imum)?\s+(?:sip|investment|lumpsum)|"
+    r"fund\s+size|aum|ter\b|"
+    r"fund\s+manag|who\s+manages|registrar|transfer\s+agent|"
+    r"benchmark|riskometer|risk\s+ometer|"
+    r"mutual\s+fund|mf\b|elss|tax\s*saver|taxsaver|"
+    r"\bsip\b|lumpsum|direct\s+(?:plan|growth)|"
+    r"hdfc|groww"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def query_is_pilot_scope(
+    query: str,
+    schemes: list[dict[str, Any]],
+    *,
+    explicit_scheme_id: str | None = None,
+) -> bool:
+    """
+    True when the question is about pilot HDFC scheme facts (not general knowledge / unrelated topics).
+
+    Off-topic queries (e.g. company or person names with no fund context) should not receive
+    scheme-disambiguation prompts.
+    """
+    if (explicit_scheme_id or "").strip():
+        return True
+    q = (query or "").strip()
+    if not q:
+        return False
+    if _PILOT_MF_SCOPE_RE.search(q):
+        return True
+    if infer_scheme_id_from_query(q, schemes):
+        return True
+    q_tokens = set(re.findall(r"[a-z0-9]+", _nominalize_fund_alias_key(q)))
+    if not q_tokens:
+        return False
+    for row in schemes:
+        tokens = _scheme_signal_tokens(row)
+        if not tokens:
+            continue
+        overlap = sum(1 for t in tokens if t in q_tokens)
+        if overlap >= 2:
+            return True
+        if overlap >= 1 and len(q_tokens) <= 4:
+            return True
+    return False
+
+
 def scheme_clarification_needed(
     hits: list[SearchHit],
     *,

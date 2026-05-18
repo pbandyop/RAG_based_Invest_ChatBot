@@ -26,6 +26,10 @@
     "refusal_out_of_corpus": {
       "body": "The assistant could not find enough supported information in the pilot corpus to answer reliably. It will not guess. No source link is provided for this response.",
       "educational_link_key": "sebi_investor_home"
+    },
+    "refusal_off_topic": {
+      "body": "This assistant only answers factual questions about the five HDFC mutual fund schemes in the pilot (from Groww scheme pages). Ask about NAV, expense ratio, exit load, minimum SIP, fund managers, lock-in, benchmark, or similar—and name the fund or pick one from “Pilot corpus on Groww” in the sidebar.",
+      "educational_link_key": "amfi_investor_corner"
     }
   },
   "ui_disclaimer_snippet": "Facts-only. No investment advice."

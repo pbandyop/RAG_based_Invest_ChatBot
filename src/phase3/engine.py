@@ -18,6 +18,7 @@ from phase3.retrieval_utils import (
     merge_manager_anchor_hits,
     merge_stat_anchor_hits,
     prioritize_hero_stat_chunks,
+    query_is_pilot_scope,
     same_scheme_manager_fallback,
     same_scheme_stat_fallback,
     scheme_clarification_needed,
@@ -110,6 +111,14 @@ class FaqRagEngine:
         if guard.refusal_template_key:
             return self._refusal(guard.refusal_template_key)
 
+        explicit_sid = (scheme_id or "").strip()
+        if not query_is_pilot_scope(
+            query,
+            self.p0.schemes,
+            explicit_scheme_id=explicit_sid or None,
+        ):
+            return self._refusal("refusal_off_topic")
+
         k = int(self.defaults.get("retrieve_k", 12))
         min_score = float(self.defaults.get("min_retrieval_score", 0.12))
         margin = float(self.defaults.get("score_margin_for_scheme_clarification", 0.028))
@@ -117,7 +126,6 @@ class FaqRagEngine:
         max_ctx = int(self.defaults.get("max_context_chunks", 6))
         dedupe = bool(self.defaults.get("dedupe_by_canonical_url", True))
 
-        explicit_sid = (scheme_id or "").strip()
         inferred_sid = infer_scheme_id_from_query(query, self.p0.schemes) if not explicit_sid else None
         effective_sid = explicit_sid or (inferred_sid or "")
 
@@ -157,6 +165,12 @@ class FaqRagEngine:
         lu_pre = max_fetched_at_iso(hits[:max_ctx])
         scheme_resolved = bool(explicit_sid) or bool(inferred_sid)
         if need_clar and not scheme_resolved:
+            if not query_is_pilot_scope(
+                query,
+                self.p0.schemes,
+                explicit_scheme_id=explicit_sid or None,
+            ):
+                return self._refusal("refusal_off_topic")
             return Phase3Response(
                 refusal=False,
                 answer=clar_msg or "",
