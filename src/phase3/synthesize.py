@@ -7,11 +7,12 @@ import re
 import time
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from phase2.retrieve import SearchHit
-from phase3.grounding import nav_focus_only_query
+from phase3.grounding import nav_focus_only_query, polish_answer_text, prefer_fact_span, truncate_to_max_sentences
 
 _log = logging.getLogger(__name__)
 
@@ -19,6 +20,137 @@ _STOP = frozenset(
     "a an the is are was were be been being to of and or for in on at by it as if with this that "
     "what which how when where who from".split(),
 )
+
+# Groww scheme-page hero: ``nav : 14 may'26 ₹1, 436. 63 min. for sip …``
+_GROWW_NAV_HERO_RE = re.compile(
+    r"\bnav\s*:\s*"
+    r"(\d{1,2}\s+[a-z]{3}\s*'?\s*\d{2,4})"
+    r"\s*₹\s*([\d,\s\.]+)",
+    re.IGNORECASE,
+)
+
+_MONTH_ABBR_TO_NAME = {
+    "jan": "January",
+    "feb": "February",
+    "mar": "March",
+    "apr": "April",
+    "may": "May",
+    "jun": "June",
+    "jul": "July",
+    "aug": "August",
+    "sep": "September",
+    "oct": "October",
+    "nov": "November",
+    "dec": "December",
+}
+
+
+@dataclass(frozen=True)
+class NavFact:
+    """NAV value and as-of date parsed from a Groww scheme-page hero line in EVIDENCE."""
+
+    amount_inr: str
+    as_of_display: str
+    source_line: str
+
+
+def _normalize_inr_amount(raw: str) -> str:
+    s = re.sub(r"\s+", "", (raw or "").strip())
+    if not s:
+        return ""
+    if not s.startswith("₹"):
+        s = f"₹{s}"
+    return s
+
+
+def _groww_nav_as_of_display(raw: str) -> str | None:
+    """``14 may'26`` → ``14 May 2026`` (scheme-page as-of, not crawl ``fetched_at``)."""
+    t = re.sub(r"\s+", " ", (raw or "").strip().lower())
+    t = t.replace("'", " ")
+    m = re.match(r"(\d{1,2})\s+([a-z]{3})\s*(\d{2,4})", t)
+    if not m:
+        return None
+    day = int(m.group(1))
+    mon_key = m.group(2)[:3]
+    month_name = _MONTH_ABBR_TO_NAME.get(mon_key)
+    if not month_name:
+        return None
+    year = int(m.group(3))
+    if year < 100:
+        year += 2000
+    return f"{day} {month_name} {year}"
+
+
+def _nav_fact_from_match(m: re.Match[str]) -> NavFact | None:
+    as_of_display = _groww_nav_as_of_display(m.group(1))
+    amount_inr = _normalize_inr_amount(m.group(2))
+    if not as_of_display or not amount_inr:
+        return None
+    source_line = re.sub(r"\s+", " ", m.group(0)).strip()
+    return NavFact(amount_inr=amount_inr, as_of_display=as_of_display, source_line=source_line)
+
+
+def extract_nav_fact_from_contexts(contexts: list[str]) -> NavFact | None:
+    """Parse NAV + as-of date from retrieved scheme-page text (first hero line wins)."""
+    for c in contexts:
+        blob = _prepare_blob([c])
+        m = _GROWW_NAV_HERO_RE.search(blob)
+        if m:
+            fact = _nav_fact_from_match(m)
+            if fact:
+                return fact
+    blob = _prepare_blob(contexts)
+    m = _GROWW_NAV_HERO_RE.search(blob)
+    if m:
+        return _nav_fact_from_match(m)
+    return None
+
+
+def fund_label_for_nav_answer(
+    *,
+    query: str,
+    scheme_id: str | None,
+    schemes: list[dict[str, Any]],
+) -> str:
+    m = re.search(
+        r"\b(?:nav|n\.a\.v\.)\b.*?\b(?:of|for)\s+(.+?)(?:\?|$)",
+        query or "",
+        re.IGNORECASE | re.DOTALL,
+    )
+    if m:
+        label = m.group(1).strip().rstrip("?.,")
+        if label:
+            return label
+    if scheme_id:
+        for row in schemes:
+            if str(row.get("scheme_id") or "") == scheme_id:
+                dn = str(row.get("display_name") or "").strip()
+                if dn:
+                    return dn
+    return "the fund"
+
+
+def format_nav_answer(fund_label: str, fact: NavFact) -> str:
+    label = (fund_label or "the fund").strip()
+    return f"The NAV of {label} is {fact.amount_inr} as of {fact.as_of_display}."
+
+
+def shape_answer_for_query(
+    query: str,
+    answer_text: str,
+    *,
+    nav_fact: NavFact | None = None,
+    fund_label: str | None = None,
+) -> str:
+    """Truncate, polish, intent-based span; NAV-only answers use scheme-page NAV date from evidence."""
+    if nav_focus_only_query(query) and nav_fact is not None:
+        return format_nav_answer(fund_label or "the fund", nav_fact)
+    out = truncate_to_max_sentences(answer_text, 3)
+    out = polish_answer_text(out)
+    out = prefer_fact_span(out, query)
+    if nav_focus_only_query(query):
+        out = truncate_to_max_sentences(out, 1)
+    return out
 
 
 def _is_plausible_sentence(p: str) -> bool:
@@ -380,6 +512,8 @@ def try_groq_json_answer(
     model: str,
     base_url: str | None = None,
     extra_user_instructions: str | None = None,
+    nav_fact: NavFact | None = None,
+    fund_label: str | None = None,
 ) -> dict[str, Any] | None:
     """
     Architecture §6.3: low temperature, JSON-only, allowlisted citation, facts-only system prompt.
@@ -415,6 +549,9 @@ def try_groq_json_answer(
         "(AUM, fund size, expense ratio, minimum SIP, TER, etc.), the answer must state only the NAV fact from "
         "EVIDENCE — typically one short sentence — and must not add AUM, SIP minimums, expense ratio, or other "
         "hero stats even when they appear in the same excerpt. "
+        "For NAV, the as-of date must be the date printed next to ``nav :`` on the scheme page in EVIDENCE "
+        "(e.g. ``14 may'26``), not today's date, not ``fetched_at`` metadata, and not invented dates. "
+        "The NAV amount must match the ₹ figure on that same ``nav :`` line. "
         "If the requested information does not appear in any excerpt (or only appears in a way you cannot state "
         "faithfully without adding unsupported detail), respond with a single sentence that the evidence is "
         "insufficient — e.g. that the retrieved corpus does not contain enough to answer. "
@@ -436,9 +573,17 @@ def try_groq_json_answer(
     )
     if nav_focus_only_query(query):
         user += (
-            "\nFOCUS_NAV_ONLY: The user asked about NAV only. Reply with only the NAV (as-of date if in EVIDENCE) "
-            "in one short sentence. Omit AUM, minimum SIP, expense ratio, and every other statistic.\n"
+            "\nFOCUS_NAV_ONLY: The user asked about NAV only. Reply with only the NAV in one short sentence. "
+            "Use the as-of date from the scheme-page ``nav : …`` line in EVIDENCE (not fetched_at). "
+            "Omit AUM, minimum SIP, expense ratio, and every other statistic.\n"
         )
+        if nav_fact is not None:
+            label = (fund_label or "the fund").strip()
+            user += (
+                f"\nCANONICAL_NAV_FROM_SCHEME_PAGE (use this NAV amount and as-of date exactly; do not change digits or date):\n"
+                f"The NAV of {label} is {nav_fact.amount_inr} as of {nav_fact.as_of_display}.\n"
+                f"Parsed from evidence line: {nav_fact.source_line}\n"
+            )
     if extra_user_instructions:
         user += f"\nADDITIONAL_INSTRUCTIONS:\n{extra_user_instructions}\n"
 

@@ -5,13 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from phase2.retrieve import IndexBundle, load_index_bundle
-from phase3.grounding import (
-    grounding_ok,
-    nav_focus_only_query,
-    polish_answer_text,
-    prefer_fact_span,
-    truncate_to_max_sentences,
-)
+from phase3.grounding import grounding_ok, nav_focus_only_query
 from phase3.models import Phase3Response
 from phase3.phase0_config import Phase0RuntimeConfig, load_phase0_runtime
 from phase3.query_guard import GuardResult, evaluate_query_guard
@@ -30,9 +24,13 @@ from phase3.retrieval_utils import (
     substantive_hits,
 )
 from phase3.synthesize import (
+    NavFact,
     _extractive_from_contexts,
     contexts_from_hits,
+    extract_nav_fact_from_contexts,
+    fund_label_for_nav_answer,
     groq_api_configured,
+    shape_answer_for_query,
     try_groq_json_answer,
 )
 from phase3.url_normalize import normalize_citation_url
@@ -41,16 +39,6 @@ _log = logging.getLogger(__name__)
 
 # Refusal classes: no user-visible URLs (architecture §1.1 — unsupported / PII).
 _REFUSAL_NO_URL_TEMPLATES = frozenset({"refusal_out_of_corpus", "refusal_no_pii"})
-
-
-def _shape_answer_for_query(query: str, answer_text: str) -> str:
-    """Truncate, polish, intent-based span — NAV-only questions get a single sentence."""
-    out = truncate_to_max_sentences(answer_text, 3)
-    out = polish_answer_text(out)
-    out = prefer_fact_span(out, query)
-    if nav_focus_only_query(query):
-        out = truncate_to_max_sentences(out, 1)
-    return out
 
 
 class FaqRagEngine:
@@ -231,6 +219,24 @@ class FaqRagEngine:
             )
             evidence_blocks.append(f"[{meta}]\n{h.text}")
 
+        nav_fact: NavFact | None = None
+        fund_label = "the fund"
+        if nav_focus_only_query(query):
+            nav_fact = extract_nav_fact_from_contexts(contexts)
+            fund_label = fund_label_for_nav_answer(
+                query=query,
+                scheme_id=sid if sid in self.p0.scheme_id_to_citation else None,
+                schemes=self.p0.schemes,
+            )
+
+        def _shape(answer_text: str) -> str:
+            return shape_answer_for_query(
+                query,
+                answer_text,
+                nav_fact=nav_fact,
+                fund_label=fund_label,
+            )
+
         try:
             from dotenv import load_dotenv
 
@@ -264,6 +270,8 @@ class FaqRagEngine:
                         model=try_model,
                         base_url=llm_base_url,
                         extra_user_instructions=hint,
+                        nav_fact=nav_fact,
+                        fund_label=fund_label,
                     )
                     if isinstance(llm_obj, dict) and str(llm_obj.get("answer") or "").strip():
                         groq_model_used = try_model
@@ -284,7 +292,7 @@ class FaqRagEngine:
             answer_text = _extractive_from_contexts(query, contexts)
             route = "extractive"
 
-        answer_text = _shape_answer_for_query(query, answer_text)
+        answer_text = _shape(answer_text)
 
         ok, reason = grounding_ok(
             answer=answer_text,
@@ -306,10 +314,12 @@ class FaqRagEngine:
                     "Rewrite: at most 3 neutral sentences, only facts supported by evidence, "
                     "no 'you should', 'recommend', 'best', or suitability language."
                 ),
+                nav_fact=nav_fact,
+                fund_label=fund_label,
             )
             if isinstance(llm_retry, dict) and llm_retry.get("answer"):
                 answer_text, citation_url, sid = self._apply_llm_dict(llm_retry, citation_url=citation_url, sid=sid)
-                answer_text = _shape_answer_for_query(query, answer_text)
+                answer_text = _shape(answer_text)
                 ok, reason = grounding_ok(
                     answer=answer_text,
                     citation_url=citation_url,
@@ -336,12 +346,14 @@ class FaqRagEngine:
                         model=model,
                         base_url=llm_base_url,
                         extra_user_instructions=f"{ghint} Failure detail: {reason!s}.",
+                        nav_fact=nav_fact,
+                        fund_label=fund_label,
                     )
                     if isinstance(llm_fix, dict) and llm_fix.get("answer"):
                         answer_text, citation_url, sid = self._apply_llm_dict(
                             llm_fix, citation_url=citation_url, sid=sid
                         )
-                        answer_text = _shape_answer_for_query(query, answer_text)
+                        answer_text = _shape(answer_text)
                         ok, reason = grounding_ok(
                             answer=answer_text,
                             citation_url=citation_url,
@@ -354,7 +366,7 @@ class FaqRagEngine:
                             break
                 if not ok:
                     answer_text = _extractive_from_contexts(query, contexts)
-                    answer_text = _shape_answer_for_query(query, answer_text)
+                    answer_text = _shape(answer_text)
                     ok2, _ = grounding_ok(
                         answer=answer_text,
                         citation_url=citation_url,
