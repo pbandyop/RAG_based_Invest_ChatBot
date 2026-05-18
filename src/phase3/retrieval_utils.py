@@ -115,14 +115,21 @@ def prioritize_hero_stat_chunks(hits: list[SearchHit], query: str) -> list[Searc
             r"\b(fund\s+management|fund\s+manager|manager\s+details|who\s+manages|registrar|fund\s+house)\b",
             q,
         ):
+            if "person _ name" in t:
+                return 6
+            if "fund _ manager _ details" in t and "person _ name" in t:
+                return 6
             if "fund _ manager _ details" in t:
-                return 4
+                return 5
             if re.search(r"\b(current\s+)?fund\s+manager\b", t):
+                return 4
+            if "also manages these schemes" in t and ("education" in t or "experience" in t):
                 return 4
             if "fund _ manager" in t and ("person _ name" in t or "education" in t):
                 return 3
-            if "also manages these schemes" in t and ("education" in t or "experience" in t):
-                return 3
+            # Stale top-level ``fund _ manager`` JSON (e.g. old single name) — deprioritize vs Fund Management block.
+            if "fund _ manager" in t and "fund _ manager _ details" not in t and "person _ name" not in t:
+                return -2
             if "fund _ manager" in t or "amc _ info" in t or "person _ name" in t:
                 return 2
             if "registrar" in t and ("cams" in t or "kfin" in t):
@@ -386,17 +393,47 @@ def merge_manager_anchor_hits(
     except Exception:
         return hits
 
+    sid = scheme_id.strip()
     for h in raw2:
-        if str(h.metadata.get("scheme_id") or "") != scheme_id.strip():
+        if str(h.metadata.get("scheme_id") or "") != sid:
             continue
         if not _chunk_has_manager_signal(h.text or ""):
             continue
         if h.chunk_id not in seen:
             seen[h.chunk_id] = h
 
+    # Fund Management JSON is often split across chunks; pull any same-scheme ``person _ name`` row.
+    if _QUERY_WANTS_MANAGER.search(query or ""):
+        try:
+            raw3 = bundle.search("person _ name fund _ manager _ details amar dhruv education experience", k=extra_k)
+        except Exception:
+            raw3 = []
+        for h in raw3:
+            if str(h.metadata.get("scheme_id") or "") != sid:
+                continue
+            t = (h.text or "").lower()
+            if "person _ name" not in t:
+                continue
+            if h.chunk_id not in seen:
+                seen[h.chunk_id] = h
+
     merged = list(seen.values())
-    merged.sort(key=lambda x: -x.score)
+    merged.sort(key=lambda h: (-_manager_chunk_priority(h.text or ""), -h.score))
     return merged
+
+
+def _manager_chunk_priority(text: str) -> int:
+    """Higher = prefer for manager Q&A (Fund Management ``person _ name`` over stale metadata)."""
+    t = (text or "").lower()
+    if "fund _ manager _ details" in t and "person _ name" in t:
+        return 3
+    if "also manages these schemes" in t and ("education" in t or "experience" in t):
+        return 2
+    if "fund _ manager" in t and "fund _ manager _ details" not in t and "person _ name" not in t:
+        return -1
+    if _chunk_has_manager_signal(text):
+        return 1
+    return 0
 
 
 def max_fetched_at_iso(hits: list[SearchHit]) -> str | None:

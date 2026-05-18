@@ -5,31 +5,36 @@
       "scheme_id": "hdfc_mid_cap_direct_growth",
       "display_name": "HDFC Mid-Cap Fund Direct Growth",
       "category": "Mid-cap",
-      "citation_url": "https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth"
+      "citation_url": "https://groww.in/mutual-funds/hdfc-mid-cap-fund-direct-growth",
+      "query_aliases": ["hdfc mid cap", "mid cap fund", "hdfc mid-cap"]
     },
     {
       "scheme_id": "hdfc_equity_direct_growth",
       "display_name": "HDFC Equity Fund Direct Growth",
       "category": "Diversified equity",
-      "citation_url": "https://groww.in/mutual-funds/hdfc-equity-fund-direct-growth"
+      "citation_url": "https://groww.in/mutual-funds/hdfc-equity-fund-direct-growth",
+      "query_aliases": ["hdfc flexi cap", "flexi cap", "hdfc equity fund"]
     },
     {
       "scheme_id": "hdfc_focused_direct_growth",
       "display_name": "HDFC Focused Fund Direct Growth",
       "category": "Focused",
-      "citation_url": "https://groww.in/mutual-funds/hdfc-focused-fund-direct-growth"
+      "citation_url": "https://groww.in/mutual-funds/hdfc-focused-fund-direct-growth",
+      "query_aliases": ["hdfc focused", "focused fund"]
     },
     {
       "scheme_id": "hdfc_elss_tax_saver_direct_growth",
       "display_name": "HDFC TaxSaver (ELSS) Direct Growth",
       "category": "ELSS",
-      "citation_url": "https://groww.in/mutual-funds/hdfc-elss-tax-saver-fund-direct-plan-growth"
+      "citation_url": "https://groww.in/mutual-funds/hdfc-elss-tax-saver-fund-direct-plan-growth",
+      "query_aliases": ["hdfc taxsaver", "hdfc tax saver", "taxsaver", "elss tax saver", "hdfc elss"]
     },
     {
       "scheme_id": "hdfc_large_cap_direct_growth",
       "display_name": "HDFC Large Cap Fund Direct Growth",
       "category": "Large-cap",
-      "citation_url": "https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth"
+      "citation_url": "https://groww.in/mutual-funds/hdfc-large-cap-fund-direct-growth",
+      "query_aliases": ["hdfc large cap", "large cap fund", "hdfc large-cap"]
     }
   ]
 }

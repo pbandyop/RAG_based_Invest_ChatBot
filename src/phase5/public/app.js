@@ -131,6 +131,7 @@ function removeWelcomeIfPresent() {
 
 function humanizeGeneratorRoute(route) {
   const r = route || "";
+  if (r === "nav_scheme_page") return "Sources (scheme-page NAV line).";
   if (r.startsWith("groq")) {
     if (r === "groq_fallback") return "Sources + language model (fallback).";
     if (r.startsWith("groq_grounding")) return "Sources + language model (citation check).";
@@ -342,7 +343,9 @@ function appendAssistantResponse(thread, data) {
   const route = data.generator_route;
   if (route) {
     const syn = document.createElement("p");
-    syn.className = "synthesis-route" + (String(route).startsWith("groq") ? " llm-on" : "");
+    syn.className =
+      "synthesis-route" +
+      (String(route).startsWith("groq") || route === "nav_scheme_page" ? " llm-on" : "");
     syn.textContent = humanizeGeneratorRoute(route);
     inner.appendChild(syn);
   }

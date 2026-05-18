@@ -33,6 +33,21 @@ def nav_focus_only_query(query: str) -> bool:
     return True
 
 
+_FUND_MANAGER_WORD = re.compile(r"\b(fund\s+managers?|who\s+manages)\b", re.IGNORECASE)
+
+
+def fund_manager_focus_query(query: str) -> bool:
+    """True when the user asks who manages the fund (Fund Management section), not registrar-only."""
+    q = query or ""
+    if not _FUND_MANAGER_WORD.search(q):
+        return False
+    if re.search(r"\b(registrar|transfer\s+agent)\b", q, re.IGNORECASE) and not re.search(
+        r"\bfund\s+managers?\b", q, re.IGNORECASE
+    ):
+        return False
+    return True
+
+
 def sentence_count(text: str) -> int:
     t = (text or "").strip()
     if not t:

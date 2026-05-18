@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from phase2.retrieve import IndexBundle, load_index_bundle
-from phase3.grounding import grounding_ok, nav_focus_only_query
+from phase3.grounding import fund_manager_focus_query, grounding_ok, nav_focus_only_query
 from phase3.models import Phase3Response
 from phase3.phase0_config import Phase0RuntimeConfig, load_phase0_runtime
 from phase3.query_guard import GuardResult, evaluate_query_guard
@@ -24,11 +24,13 @@ from phase3.retrieval_utils import (
     substantive_hits,
 )
 from phase3.synthesize import (
+    FundManagementFact,
     NavFact,
     _extractive_from_contexts,
     contexts_from_hits,
+    extract_fund_managers_from_contexts,
     extract_nav_fact_from_contexts,
-    fund_label_for_nav_answer,
+    fund_label_for_answer,
     groq_api_configured,
     shape_answer_for_query,
     try_groq_json_answer,
@@ -219,21 +221,25 @@ class FaqRagEngine:
             )
             evidence_blocks.append(f"[{meta}]\n{h.text}")
 
+        resolved_sid = sid if sid in self.p0.scheme_id_to_citation else None
+        fund_label = fund_label_for_answer(
+            query=query,
+            scheme_id=resolved_sid,
+            schemes=self.p0.schemes,
+        )
         nav_fact: NavFact | None = None
-        fund_label = "the fund"
+        manager_fact: FundManagementFact | None = None
         if nav_focus_only_query(query):
             nav_fact = extract_nav_fact_from_contexts(contexts)
-            fund_label = fund_label_for_nav_answer(
-                query=query,
-                scheme_id=sid if sid in self.p0.scheme_id_to_citation else None,
-                schemes=self.p0.schemes,
-            )
+        if fund_manager_focus_query(query):
+            manager_fact = extract_fund_managers_from_contexts(contexts)
 
         def _shape(answer_text: str) -> str:
             return shape_answer_for_query(
                 query,
                 answer_text,
                 nav_fact=nav_fact,
+                manager_fact=manager_fact,
                 fund_label=fund_label,
             )
 
@@ -271,6 +277,7 @@ class FaqRagEngine:
                         base_url=llm_base_url,
                         extra_user_instructions=hint,
                         nav_fact=nav_fact,
+                        manager_fact=manager_fact,
                         fund_label=fund_label,
                     )
                     if isinstance(llm_obj, dict) and str(llm_obj.get("answer") or "").strip():
@@ -315,6 +322,7 @@ class FaqRagEngine:
                     "no 'you should', 'recommend', 'best', or suitability language."
                 ),
                 nav_fact=nav_fact,
+                manager_fact=manager_fact,
                 fund_label=fund_label,
             )
             if isinstance(llm_retry, dict) and llm_retry.get("answer"):
@@ -347,6 +355,7 @@ class FaqRagEngine:
                         base_url=llm_base_url,
                         extra_user_instructions=f"{ghint} Failure detail: {reason!s}.",
                         nav_fact=nav_fact,
+                        manager_fact=manager_fact,
                         fund_label=fund_label,
                     )
                     if isinstance(llm_fix, dict) and llm_fix.get("answer"):

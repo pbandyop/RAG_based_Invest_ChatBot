@@ -12,7 +12,13 @@ from pathlib import Path
 from typing import Any
 
 from phase2.retrieve import SearchHit
-from phase3.grounding import nav_focus_only_query, polish_answer_text, prefer_fact_span, truncate_to_max_sentences
+from phase3.grounding import (
+    fund_manager_focus_query,
+    nav_focus_only_query,
+    polish_answer_text,
+    prefer_fact_span,
+    truncate_to_max_sentences,
+)
 
 _log = logging.getLogger(__name__)
 
@@ -52,6 +58,20 @@ class NavFact:
     amount_inr: str
     as_of_display: str
     source_line: str
+
+
+@dataclass(frozen=True)
+class FundManagementFact:
+    """Fund manager name(s) from Groww Fund Management (``fund_manager_details`` / person_name)."""
+
+    names: tuple[str, ...]
+
+
+# Groww JSON in crawl: ``" person _ name " : " amar kalkundrikar "`` inside ``fund_manager_details``.
+_PERSON_NAME_IN_DETAILS_RE = re.compile(
+    r'person\s*_\s*name\s*"\s*:\s*"\s*([a-z][a-z\s\.\-]{1,80}?)\s*"',
+    re.IGNORECASE,
+)
 
 
 def _normalize_inr_amount(raw: str) -> str:
@@ -106,21 +126,78 @@ def extract_nav_fact_from_contexts(contexts: list[str]) -> NavFact | None:
     return None
 
 
-def fund_label_for_nav_answer(
+def _normalize_person_name(raw: str) -> str:
+    s = re.sub(r"\s+", " ", (raw or "").strip().lower())
+    if not s:
+        return ""
+    return " ".join(part.capitalize() for part in s.split())
+
+
+def extract_fund_managers_from_contexts(contexts: list[str]) -> FundManagementFact | None:
+    """
+    Parse manager names from Groww Fund Management JSON (``person_name`` in crawl chunks).
+
+    Ignores stale top-level ``fund_manager`` strings (e.g. old single-name metadata).
+    """
+    ordered: list[str] = []
+    seen: set[str] = set()
+
+    for c in contexts:
+        blob = _prepare_blob([c])
+        for m in _PERSON_NAME_IN_DETAILS_RE.finditer(blob):
+            name = _normalize_person_name(m.group(1))
+            key = name.lower()
+            if len(name) < 4 or key in seen:
+                continue
+            seen.add(key)
+            ordered.append(name)
+
+    if ordered:
+        if len(ordered) > 1:
+            ordered = sorted(ordered, key=str.lower)
+        return FundManagementFact(names=tuple(ordered))
+
+    # Fallback: compare-section bios (``education mr. kalkundrikar`` / ``education mr. dhruv``).
+    blob = _prepare_blob(contexts)
+    for m in re.finditer(
+        r"\beducation\s+mr\.?\s+([a-z][a-z\-]{2,40})\b",
+        blob,
+        re.IGNORECASE,
+    ):
+        fragment = m.group(1).lower()
+        if fragment in ("dhruv",):
+            name = "Dhruv Muchhal"
+        elif "kalkundrikar" in fragment or fragment in ("kalkundrikar", "amar"):
+            name = "Amar Kalkundrikar"
+        else:
+            name = _normalize_person_name(fragment)
+        key = name.lower()
+        if name and key not in seen:
+            seen.add(key)
+            ordered.append(name)
+
+    if ordered:
+        return FundManagementFact(names=tuple(ordered))
+    return None
+
+
+def fund_label_for_answer(
     *,
     query: str,
     scheme_id: str | None,
     schemes: list[dict[str, Any]],
 ) -> str:
-    m = re.search(
+    q = query or ""
+    for pat in (
         r"\b(?:nav|n\.a\.v\.)\b.*?\b(?:of|for)\s+(.+?)(?:\?|$)",
-        query or "",
-        re.IGNORECASE | re.DOTALL,
-    )
-    if m:
-        label = m.group(1).strip().rstrip("?.,")
-        if label:
-            return label
+        r"\bfund\s+managers?\b.*?\b(?:of|for)\s+(.+?)(?:\?|$)",
+        r"\bwho\s+manages\b\s+(.+?)(?:\?|$)",
+    ):
+        m = re.search(pat, q, re.IGNORECASE | re.DOTALL)
+        if m:
+            label = m.group(1).strip().rstrip("?.,")
+            if label:
+                return label
     if scheme_id:
         for row in schemes:
             if str(row.get("scheme_id") or "") == scheme_id:
@@ -130,9 +207,31 @@ def fund_label_for_nav_answer(
     return "the fund"
 
 
+def fund_label_for_nav_answer(
+    *,
+    query: str,
+    scheme_id: str | None,
+    schemes: list[dict[str, Any]],
+) -> str:
+    return fund_label_for_answer(query=query, scheme_id=scheme_id, schemes=schemes)
+
+
 def format_nav_answer(fund_label: str, fact: NavFact) -> str:
     label = (fund_label or "the fund").strip()
     return f"The NAV of {label} is {fact.amount_inr} as of {fact.as_of_display}."
+
+
+def format_fund_manager_answer(fund_label: str, fact: FundManagementFact) -> str:
+    label = (fund_label or "the fund").strip()
+    names = fact.names
+    if not names:
+        return ""
+    if len(names) == 1:
+        return f"The fund manager of {label} is {names[0]}."
+    if len(names) == 2:
+        return f"The fund managers of {label} are {names[0]} and {names[1]}."
+    body = ", ".join(names[:-1]) + f", and {names[-1]}"
+    return f"The fund managers of {label} are {body}."
 
 
 def shape_answer_for_query(
@@ -140,11 +239,15 @@ def shape_answer_for_query(
     answer_text: str,
     *,
     nav_fact: NavFact | None = None,
+    manager_fact: FundManagementFact | None = None,
     fund_label: str | None = None,
 ) -> str:
-    """Truncate, polish, intent-based span; NAV-only answers use scheme-page NAV date from evidence."""
+    """Truncate, polish, intent-based span; grounded NAV / fund-manager facts override LLM prose."""
+    label = fund_label or "the fund"
     if nav_focus_only_query(query) and nav_fact is not None:
-        return format_nav_answer(fund_label or "the fund", nav_fact)
+        return format_nav_answer(label, nav_fact)
+    if fund_manager_focus_query(query) and manager_fact is not None and manager_fact.names:
+        return format_fund_manager_answer(label, manager_fact)
     out = truncate_to_max_sentences(answer_text, 3)
     out = polish_answer_text(out)
     out = prefer_fact_span(out, query)
@@ -237,10 +340,12 @@ def _extractive_priority_nav_aum(blob: str, query: str) -> list[str]:
 
 
 def _extractive_priority_fund_manager(blob: str, query: str) -> list[str]:
-    """Pull manager / bio lines when the question asks (Groww crawl shapes)."""
-    q = (query or "").lower()
-    if not re.search(r"\b(fund\s+management|fund\s+manager|who\s+manages)\b", q):
+    """Pull manager answer when the question asks (Fund Management names from crawl)."""
+    if not fund_manager_focus_query(query):
         return []
+    fact = extract_fund_managers_from_contexts([blob])
+    if fact and fact.names:
+        return [format_fund_manager_answer("the fund", fact)]
     out: list[str] = []
     for pat in (
         r"\b[^.]{10,520}\b(current\s+)?fund\s+manager\b[^.]{0,460}\.",
@@ -513,6 +618,7 @@ def try_groq_json_answer(
     base_url: str | None = None,
     extra_user_instructions: str | None = None,
     nav_fact: NavFact | None = None,
+    manager_fact: FundManagementFact | None = None,
     fund_label: str | None = None,
 ) -> dict[str, Any] | None:
     """
@@ -552,6 +658,10 @@ def try_groq_json_answer(
         "For NAV, the as-of date must be the date printed next to ``nav :`` on the scheme page in EVIDENCE "
         "(e.g. ``14 may'26``), not today's date, not ``fetched_at`` metadata, and not invented dates. "
         "The NAV amount must match the ₹ figure on that same ``nav :`` line. "
+        "**Fund manager:** For who manages a scheme, use names from the Groww **Fund Management** section in "
+        "EVIDENCE — the ``fund_manager_details`` list with ``person_name`` entries. List every current manager "
+        "shown there. Do **not** use stale top-level ``fund_manager`` metadata strings if ``fund_manager_details`` "
+        "or Fund Management headings list different people. "
         "If the requested information does not appear in any excerpt (or only appears in a way you cannot state "
         "faithfully without adding unsupported detail), respond with a single sentence that the evidence is "
         "insufficient — e.g. that the retrieved corpus does not contain enough to answer. "
@@ -583,6 +693,21 @@ def try_groq_json_answer(
                 f"\nCANONICAL_NAV_FROM_SCHEME_PAGE (use this NAV amount and as-of date exactly; do not change digits or date):\n"
                 f"The NAV of {label} is {nav_fact.amount_inr} as of {nav_fact.as_of_display}.\n"
                 f"Parsed from evidence line: {nav_fact.source_line}\n"
+            )
+    if fund_manager_focus_query(query):
+        user += (
+            "\nFOCUS_FUND_MANAGER: The user asked who manages the fund. Use only the Fund Management section "
+            "(``fund_manager_details`` / ``person_name``). Ignore outdated single ``fund_manager`` JSON fields "
+            "when details list other names.\n"
+        )
+        if manager_fact is not None and manager_fact.names:
+            label = (fund_label or "the fund").strip()
+            canonical = format_fund_manager_answer(label, manager_fact)
+            names_line = ", ".join(manager_fact.names)
+            user += (
+                f"\nCANONICAL_FUND_MANAGEMENT (use these manager name(s) exactly; include all listed):\n"
+                f"{canonical}\n"
+                f"Managers from Fund Management evidence: {names_line}\n"
             )
     if extra_user_instructions:
         user += f"\nADDITIONAL_INSTRUCTIONS:\n{extra_user_instructions}\n"
