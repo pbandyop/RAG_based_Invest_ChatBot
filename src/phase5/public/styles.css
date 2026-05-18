@@ -19,6 +19,109 @@
   --st-font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
+html:not(.dark) {
+  color-scheme: light;
+  --st-primary: #006875;
+  --st-primary-dim: #00838f;
+  --st-primary-container: #00a3b4;
+  --st-on-primary-fixed: #001f24;
+  --st-surface-container: #ffffff;
+  --st-surface-container-high: #f3f7fc;
+  --st-surface-container-highest: #e8eff7;
+  --st-surface-container-lowest: #ffffff;
+  --st-surface-bright: #dce8f4;
+  --st-outline-variant: #c5d4e0;
+  --st-on-surface: #152535;
+  --st-on-surface-variant: #4a5f73;
+  --st-error: #ba1a1a;
+}
+
+html:not(.dark) ::-webkit-scrollbar-track {
+  background: #eef4fb;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: #b8c9d9;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: #8a9bab;
+}
+
+html:not(.dark) .bg-background,
+html:not(.dark) body.bg-background {
+  background-color: #eef4fb !important;
+}
+
+html:not(.dark) .bg-surface-container {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .bg-surface-container-high {
+  background-color: #f3f7fc !important;
+}
+
+html:not(.dark) [class*="bg-surface-container-high"] {
+  background-color: #f3f7fc !important;
+}
+
+html:not(.dark) .bg-surface-container-highest {
+  background-color: #e8eff7 !important;
+}
+
+html:not(.dark) .bg-surface-container-low,
+html:not(.dark) [class*="bg-surface-container-low"] {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .bg-surface-container-lowest {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .bg-surface-bright {
+  background-color: #dce8f4 !important;
+}
+
+html:not(.dark) .text-on-background,
+html:not(.dark) .text-on-surface {
+  color: #152535 !important;
+}
+
+html:not(.dark) .text-on-surface-variant {
+  color: #4a5f73 !important;
+}
+
+html:not(.dark) .text-primary-fixed-dim {
+  color: #00838f !important;
+}
+
+html:not(.dark) .text-outline {
+  color: #6b7f92 !important;
+}
+
+html:not(.dark) .border-outline-variant,
+html:not(.dark) [class*="border-outline-variant"] {
+  border-color: #c5d4e0 !important;
+}
+
+html:not(.dark) .assistant-bubble-shell {
+  border-left-color: rgba(0, 131, 143, 0.55);
+}
+
+html:not(.dark) .evidence-block summary:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+html:not(.dark) .refusal-badge {
+  color: #8b1a1a;
+  background: #fde8e8;
+}
+
+html:not(.dark) .refusal-badge--system {
+  color: #6d4c00;
+  background: #fff3d6;
+}
+
 /* Scrollbars (Stitch) */
 ::-webkit-scrollbar {
   width: 6px;

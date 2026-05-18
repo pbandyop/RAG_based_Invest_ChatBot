@@ -7,6 +7,43 @@ const AADHAAR_LIKE = /\b\d{4}\s?\d{4}\s?\d{4}\b/;
 
 const SESSIONS_STORAGE_KEY = "nextleap_groww_chat_sessions_v1";
 const ACTIVE_SESSION_STORAGE_KEY = "nextleap_groww_chat_active_v1";
+const THEME_STORAGE_KEY = "nextleap_groww_theme";
+
+function applyTheme(dark) {
+  document.documentElement.classList.toggle("dark", dark);
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, dark ? "dark" : "light");
+  } catch {
+    /* ignore */
+  }
+  const btn = document.getElementById("theme-toggle-btn");
+  const label = document.getElementById("theme-toggle-label");
+  const iconLight = document.getElementById("theme-toggle-icon-light");
+  const iconDark = document.getElementById("theme-toggle-icon-dark");
+  if (label) {
+    label.textContent = dark ? "Light mode" : "Dark mode";
+  }
+  if (btn) {
+    btn.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+  }
+  if (iconLight && iconDark) {
+    iconLight.classList.toggle("hidden", dark);
+    iconDark.classList.toggle("hidden", !dark);
+  }
+}
+
+function initThemeToggle() {
+  let dark = true;
+  try {
+    dark = localStorage.getItem(THEME_STORAGE_KEY) !== "light";
+  } catch {
+    /* ignore */
+  }
+  applyTheme(dark);
+  document.getElementById("theme-toggle-btn")?.addEventListener("click", () => {
+    applyTheme(!document.documentElement.classList.contains("dark"));
+  });
+}
 
 const SVG_BOT = `<svg class="h-5 w-5 text-primary-fixed-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>`;
 
@@ -446,6 +483,8 @@ function wireExamples(textarea) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  initThemeToggle();
+
   const form = document.getElementById("query-form");
   const textarea = document.getElementById("question-input");
   const status = document.getElementById("status");
