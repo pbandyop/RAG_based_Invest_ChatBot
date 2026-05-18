@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>HDFC Mutual Fund Assistant</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#e0e3e5",
+                    "background": "#f7f9fb",
+                    "surface-bright": "#f7f9fb",
+                    "inverse-surface": "#2d3133",
+                    "primary-fixed-dim": "#43d8f2",
+                    "outline-variant": "#bbc9cc",
+                    "surface-container": "#eceef0",
+                    "secondary-container": "#d5e0f8",
+                    "surface-container-low": "#f2f4f6",
+                    "on-background": "#191c1e",
+                    "primary-fixed": "#a2eeff",
+                    "surface-dim": "#d8dadc",
+                    "inverse-on-surface": "#eff1f3",
+                    "on-error": "#ffffff",
+                    "primary-container": "#00bdd6",
+                    "on-surface-variant": "#3c494c",
+                    "tertiary-fixed": "#d3e4fe",
+                    "on-primary-fixed": "#001f25",
+                    "surface": "#f7f9fb",
+                    "surface-container-high": "#e6e8ea",
+                    "on-tertiary-fixed-variant": "#38485d",
+                    "on-secondary-fixed-variant": "#3c475a",
+                    "secondary": "#545f73",
+                    "secondary-fixed-dim": "#bcc7de",
+                    "on-error-container": "#93000a",
+                    "on-secondary-container": "#586377",
+                    "surface-container-highest": "#e0e3e5",
+                    "on-surface": "#191c1e",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed": "#d8e3fb",
+                    "surface-tint": "#006877",
+                    "on-primary-container": "#004752",
+                    "error": "#ba1a1a",
+                    "on-tertiary-container": "#314156",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-fixed": "#0b1c30",
+                    "outline": "#6c797d",
+                    "on-secondary": "#ffffff",
+                    "tertiary-container": "#9dadc6",
+                    "on-secondary-fixed": "#111c2d",
+                    "inverse-primary": "#43d8f2",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed-variant": "#004e5a",
+                    "tertiary-fixed-dim": "#b7c8e1",
+                    "primary": "#006877",
+                    "on-primary": "#ffffff",
+                    "tertiary": "#505f76"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xs": "4px",
+                    "margin-mobile": "16px",
+                    "sm": "8px",
+                    "base": "4px",
+                    "margin-desktop": "32px",
+                    "gutter": "20px",
+                    "lg": "24px",
+                    "md": "16px",
+                    "xl": "32px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Geist"],
+                    "label-md": ["Geist"],
+                    "headline-sm": ["Geist"],
+                    "headline-lg-mobile": ["Geist"],
+                    "headline-md": ["Geist"],
+                    "headline-lg": ["Geist"],
+                    "body-md": ["Geist"]
+            },
+            "fontSize": {
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600"}],
+                    "headline-lg": ["30px", {"lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Geist', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 right-0 h-16 bg-surface-container-lowest flex items-center justify-between px-margin-mobile z-50">
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-surface-container-low transition-all duration-200 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface">menu</span>
+</button>
+<h1 class="font-headline-sm text-headline-sm text-primary tracking-tight">HDFC ASSISTANT</h1>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 hover:bg-surface-container-low transition-all duration-200 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="info">info</span>
+</button>
+<button class="p-2 hover:bg-surface-container-low transition-all duration-200 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 mt-16 pb-32 overflow-y-auto px-margin-mobile flex flex-col gap-lg">
+<!-- Disclaimer Banner -->
+<div class="mt-lg bg-secondary-container rounded-xl p-md flex items-start gap-md border border-outline-variant/30">
+<span class="material-symbols-outlined text-on-secondary-container mt-0.5" data-icon="verified_user">verified_user</span>
+<div>
+<h3 class="font-label-md text-label-md text-on-secondary-container mb-xs uppercase tracking-wider">Facts-only Assistant</h3>
+<p class="font-body-md text-body-md text-on-secondary-container">This bot provides verified data from official HDFC scheme documents. It does not provide financial advice or market predictions.</p>
+</div>
+</div>
+<!-- Greeting Message -->
+<div class="flex flex-col gap-sm">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container text-lg" data-icon="smart_toy" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">HDFC Assistant • Just now</span>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-tr-xl rounded-bl-xl rounded-br-xl p-lg shadow-sm max-w-[90%]">
+<p class="font-body-lg text-body-lg text-on-surface mb-md">Hi — I'm a facts-only assistant for the HDFC schemes in this pilot. I can help you with portfolio insights, scheme performance data, and regulatory disclosures.</p>
+<p class="font-body-lg text-body-lg text-on-surface">What information are you looking for today?</p>
+</div>
+</div>
+<!-- Visual Asset (Bento-style card) -->
+<div class="bg-surface-container-high rounded-xl overflow-hidden aspect-video relative group">
+<img alt="Institutional Finance" class="w-full h-full object-cover grayscale opacity-80" data-alt="A clean, minimalist high-key photograph of a modern glass skyscraper reflecting a bright blue morning sky. The aesthetic is professional and corporate, emphasizing architectural precision and transparency. The lighting is soft and diffused, creating a serene and reliable atmosphere suitable for an institutional financial portal. Small geometric teal accents are subtly integrated into the composition to match the primary brand color." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFy854zV5XJEH8fwKbZa_ogwIg_H1WtVFiF9kzazuspeumstYnBfAiyJCuRt4WaF4CLKFk8364GF2dxeflGmtQMRAHvKBH16TJbLK5244n9P6qXioYyRg0YOufgsb66jMhBJsfWO56a5IfHQuLgQKl-bq6Y_5ORBLwFwQPBH4QDP3Wlq_2bjd_kdrFpRwCz0ikM-BkzPPXRvYSzteivJYFhKwhZS8GV1_LZyN2NzAaDjd-sE5wIsiAsXQimQHca7X-2j_7MACPbjRX"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+<div class="absolute bottom-md left-md">
+<span class="bg-primary/20 backdrop-blur-md text-white font-label-md text-label-md px-sm py-1 rounded-full border border-white/20">Institutional Pilot v1.2</span>
+</div>
+</div>
+</main>
+<!-- Bottom Action Bar & Input -->
+<footer class="fixed bottom-0 left-0 right-0 bg-surface/80 backdrop-blur-md border-t border-outline-variant/30 px-margin-mobile py-md z-50">
+<!-- Suggestion Chips -->
+<div class="flex overflow-x-auto gap-sm no-scrollbar pb-md">
+<button class="whitespace-nowrap px-md py-2 bg-surface-container-low border border-outline-variant text-on-surface-variant font-label-md text-label-md rounded-full hover:bg-secondary-container transition-colors duration-200">
+                Scheme NAV History
+            </button>
+<button class="whitespace-nowrap px-md py-2 bg-surface-container-low border border-outline-variant text-on-surface-variant font-label-md text-label-md rounded-full hover:bg-secondary-container transition-colors duration-200">
+                Risk-o-meter rating
+            </button>
+<button class="whitespace-nowrap px-md py-2 bg-surface-container-low border border-outline-variant text-on-surface-variant font-label-md text-label-md rounded-full hover:bg-secondary-container transition-colors duration-200">
+                Exit Load details
+            </button>
+</div>
+<!-- Input Field Container -->
+<div class="flex items-center gap-sm bg-surface-container-lowest border border-outline-variant rounded-full px-lg py-sm shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+<span class="material-symbols-outlined text-outline" data-icon="attachment">attachment</span>
+<input class="flex-1 bg-transparent border-none focus:ring-0 text-body-md font-body-md text-on-surface placeholder-on-surface-variant/50" placeholder="Ask about HDFC schemes..." type="text"/>
+<button class="bg-primary text-on-primary w-10 h-10 rounded-full flex items-center justify-center hover:bg-on-primary-container transition-colors">
+<span class="material-symbols-outlined" data-icon="arrow_upward">arrow_upward</span>
+</button>
+</div>
+<!-- Safe Area Spacer for Mobile -->
+<div class="h-4"></div>
+</footer>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</body></html>

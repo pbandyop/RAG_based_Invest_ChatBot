@@ -116,35 +116,36 @@
       ></div>
 
       <aside
-        class="sidebar fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 -translate-x-full flex-col border-r border-outline-variant bg-surface-container transition-transform lg:relative lg:translate-x-0"
+        class="sidebar fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 -translate-x-full flex-col border-r border-outline-variant bg-surface-container py-6 transition-transform lg:relative lg:w-64 lg:translate-x-0"
         id="sidebar"
         data-purpose="navigation-sidebar"
       >
-        <div class="p-6">
-          <h1 class="text-xl font-bold tracking-tight text-on-surface">HDFC Mutual Fund Chat Assistant.</h1>
-          <p class="mt-1 text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant">HDFC pilot • Groww corpus</p>
+        <div class="sidebar-brand mb-8 px-6">
+          <div class="flex items-center gap-3">
+            <div
+              class="sidebar-brand-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-fixed-dim"
+              aria-hidden="true"
+            >
+              <span class="material-symbols-outlined filled text-base text-white">account_balance</span>
+            </div>
+            <div>
+              <h1 class="text-base font-bold leading-tight text-primary">MF Assistant</h1>
+              <p class="text-xs font-medium text-on-surface-variant">Institutional Portal</p>
+            </div>
+          </div>
         </div>
-        <nav class="flex flex-1 flex-col space-y-1 px-3">
+        <nav class="flex flex-1 flex-col gap-1 px-2">
           <button
             type="button"
             id="new-chat-btn"
-            class="group mb-4 flex w-full items-center gap-3 rounded-lg border border-outline-variant bg-surface-container-highest px-4 py-3 text-on-surface transition-all hover:bg-surface-bright"
+            class="btn-new-chat nav-item mb-2 flex w-full items-center gap-3 px-4 py-3 text-left transition-all duration-200"
           >
-            <svg class="h-5 w-5 text-primary-fixed-dim transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-            </svg>
-            <span class="text-sm font-bold tracking-tight">New chat</span>
+            <span class="material-symbols-outlined text-xl" aria-hidden="true">add_comment</span>
+            <span class="text-sm font-bold">New chat</span>
           </button>
-          <span class="flex items-center gap-3 rounded-lg border border-outline-variant/30 bg-surface-container-high px-4 py-2.5 text-on-surface">
-            <svg class="h-5 w-5 text-primary-fixed-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-              />
-            </svg>
-            <span class="text-sm font-medium">Chat</span>
+          <span class="nav-item-active flex items-center gap-3 px-4 py-3" aria-current="page">
+            <span class="material-symbols-outlined text-xl" aria-hidden="true">chat</span>
+            <span class="text-sm font-bold">Chat</span>
           </span>
 
           <div class="pt-3">
@@ -155,20 +156,13 @@
             <button
               type="button"
               id="corpus-nav-toggle"
-              class="group flex w-full items-center justify-between px-4 py-2 text-on-surface-variant transition-colors hover:text-on-surface"
+              class="nav-item group flex w-full items-center justify-between px-4 py-3 text-on-surface-variant transition-colors hover:text-on-surface"
               aria-expanded="false"
               aria-controls="corpus-nav-panel"
             >
               <div class="flex items-center gap-3">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                  />
-                </svg>
-                <span class="text-sm font-medium">Pilot corpus on Groww</span>
+                <span class="material-symbols-outlined text-xl" aria-hidden="true">database</span>
+                <span class="text-sm font-medium">Pilot corpus</span>
               </div>
               <svg class="corpus-chevron h-4 w-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -188,7 +182,7 @@
             <button
               type="button"
               id="theme-toggle-btn"
-              class="group flex w-full items-center gap-3 px-4 py-2 text-on-surface-variant transition-colors hover:text-on-surface"
+              class="nav-item group flex w-full items-center gap-3 px-4 py-3 text-on-surface-variant transition-colors hover:text-on-surface"
               aria-label="Switch to light mode"
             >
               <svg
@@ -225,32 +219,48 @@
             </button>
           </div>
 
-          <div class="mt-auto pt-6">
+          <div class="mt-auto border-t border-outline-variant px-4 pt-4">
             <button
               type="button"
               id="clear-chat-btn"
-              class="group flex w-full items-center gap-3 px-4 py-2 text-outline transition-colors hover:text-on-surface-variant"
+              class="btn-clear-history flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200"
               aria-label="Delete the current conversation only"
             >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-              <span class="text-[10px] font-semibold uppercase tracking-wider">Delete this chat</span>
+              <span class="material-symbols-outlined text-lg" aria-hidden="true">delete_sweep</span>
+              <span>Clear chat history</span>
             </button>
           </div>
         </nav>
-        <div class="border-t border-outline-variant p-6">
-          <p class="text-[10px] font-bold uppercase leading-relaxed tracking-wider text-outline">Facts-only • descriptive • no accounts</p>
+        <div class="hidden border-t border-outline-variant px-6 py-4 lg:block">
+          <p class="text-[10px] font-medium leading-relaxed text-outline">Facts-only • descriptive • no accounts</p>
         </div>
       </aside>
 
-      <main class="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-background" data-purpose="main-chat">
-        <div class="flex items-center justify-between border-b border-outline-variant bg-surface-container/50 p-4 lg:hidden">
+      <main class="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-background lg:pt-16" data-purpose="main-chat">
+        <header
+          class="desktop-app-bar fixed top-0 right-0 z-10 hidden h-16 items-center justify-between border-b border-outline-variant bg-surface-container px-6 lg:left-64 lg:flex"
+          data-purpose="desktop-app-bar"
+        >
+          <h2 class="text-xl font-bold text-primary">HDFC Mutual Fund Assistant</h2>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container-low"
+              aria-label="About this pilot"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            </button>
+            <button
+              type="button"
+              class="rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container-low"
+              aria-label="Account"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">account_circle</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="mobile-top-bar flex h-16 items-center justify-between border-b border-outline-variant bg-surface-container-lowest px-4 lg:hidden">
           <button
             type="button"
             id="sidebar-open-btn"
@@ -261,7 +271,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <h2 class="text-sm font-bold uppercase tracking-wider text-primary-fixed-dim">HDFC assistant</h2>
+          <h2 class="text-sm font-bold tracking-tight text-primary">HDFC ASSISTANT</h2>
           <button
             type="button"
             id="corpus-mobile-open"
@@ -281,33 +291,39 @@
           </button>
         </div>
 
-        <header class="shrink-0 px-4 pb-4 pt-6 text-center lg:pt-8" data-purpose="main-header">
+        <header class="main-header-centered shrink-0 px-4 pb-4 pt-6 text-center dark:lg:pt-8" data-purpose="main-header">
           <h2 class="text-2xl font-bold tracking-tight text-primary-fixed-dim">HDFC Mutual Fund Assistant</h2>
           <p class="mt-1 text-sm font-medium text-on-surface-variant">Chat with facts from our Groww pilot corpus</p>
           <div class="mt-6 flex justify-center">
-            <div class="flex items-center gap-2 rounded-full border border-outline-variant/30 bg-surface-container-low px-4 py-1.5">
-              <svg class="h-4 w-4 text-tertiary-fixed-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="disclaimer-pill flex items-center gap-2 rounded-full border px-4 py-1.5">
+              <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span id="disclaimer-text" class="text-[11px] font-semibold text-on-surface-variant">Loading…</span>
+              <span id="disclaimer-text" class="text-[11px] font-semibold">Loading…</span>
             </div>
           </div>
         </header>
 
+        <div
+          class="light-disclaimer-banner mx-4 mb-4 mt-2 flex items-start gap-4 rounded-xl border border-outline-variant/30 p-4 lg:mx-auto lg:mt-4 lg:max-w-3xl"
+          role="note"
+        >
+          <span class="material-symbols-outlined mt-0.5 shrink-0" aria-hidden="true">verified_user</span>
+          <div>
+            <h3 class="mb-1 text-xs font-semibold uppercase tracking-wider">Facts-only assistant</h3>
+            <p class="m-0 text-sm leading-relaxed">
+              Verified data from official HDFC scheme pages on Groww. No financial advice or market predictions.
+            </p>
+          </div>
+        </div>
+
         <div id="chat-thread" class="min-h-0 flex-1 overflow-y-auto" data-purpose="chat-scroll" aria-label="Chat transcript">
-          <div id="chat-thread-messages" class="mx-auto max-w-3xl space-y-8 px-4 py-6" role="log" aria-relevant="additions">
-            <div id="chat-welcome" class="flex animate-fade-in items-start gap-4">
-              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-high shadow-sm">
-                <svg class="h-5 w-5 text-primary-fixed-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
-                  />
-                </svg>
+          <div id="chat-thread-messages" class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 lg:gap-8" role="log" aria-relevant="additions">
+            <div id="chat-welcome" class="flex animate-fade-in items-start gap-3">
+              <div class="chat-avatar-assistant flex h-8 w-8 shrink-0 items-center justify-center">
+                <span class="material-symbols-outlined filled" aria-hidden="true">smart_toy</span>
               </div>
-              <div class="assistant-bubble-shell flex-1 rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-xl">
+              <div class="assistant-bubble-shell chat-assistant-bubble flex-1 border p-4 lg:p-6">
                 <p class="body-md leading-relaxed text-on-surface">
                   Hi — I’m a <strong class="font-semibold text-on-surface">facts-only</strong> assistant for the HDFC schemes in this pilot. Ask
                   about NAV, fees, SIP minimums, and similar details; I’ll answer from retrieved Groww pages. I don’t give advice or predictions.
@@ -325,7 +341,7 @@
           </div>
         </div>
 
-        <footer id="chat-composer" class="shrink-0 bg-gradient-to-t from-background via-background to-transparent px-4 pb-6 pt-4 lg:pb-10" data-purpose="input-section">
+        <footer id="chat-composer" class="chat-composer-footer shrink-0 bg-gradient-to-t from-background via-background to-transparent px-4 pb-6 pt-4 lg:pb-10" data-purpose="input-section">
           <div class="mx-auto max-w-3xl space-y-4">
             <div class="flex flex-wrap justify-center gap-2" role="group" aria-label="Suggested prompts">
               <button
@@ -353,9 +369,9 @@
 
             <form id="query-form" class="space-y-2" novalidate>
               <div class="group relative">
-                <div class="absolute inset-0 rounded-2xl bg-primary-fixed-dim/5 blur-md transition-all group-focus-within:bg-primary-fixed-dim/10"></div>
+                <div class="composer-glow absolute inset-0 rounded-2xl bg-primary-fixed-dim/5 blur-md transition-all group-focus-within:bg-primary-fixed-dim/10"></div>
                 <div
-                  class="relative flex items-end rounded-2xl border border-outline-variant bg-surface-container-high/90 p-2 shadow-2xl transition-all focus-within:border-primary-fixed-dim/50"
+                  class="composer-input-wrap relative flex items-end rounded-2xl border p-2 transition-all"
                 >
                   <label class="sr-only" for="question-input">Message</label>
                   <textarea
@@ -365,16 +381,18 @@
                     maxlength="4000"
                     autocomplete="off"
                     required
-                    placeholder="Message about a pilot HDFC fund on Groww…"
+                    placeholder="Type your query here…"
                     class="max-h-40 min-h-[48px] flex-1 resize-none border-0 bg-transparent px-4 py-3 text-base text-on-surface placeholder:text-outline focus:ring-0 lg:text-lg"
                   ></textarea>
                   <button
                     type="submit"
                     id="submit-btn"
-                    class="mb-0.5 rounded-xl bg-primary-fixed-dim p-3 text-on-primary-fixed shadow-lg transition-all hover:bg-surface-tint active:scale-95"
+                    class="mb-0.5 rounded-xl bg-primary-fixed-dim p-3 text-on-primary-fixed shadow-lg transition-all hover:bg-surface-tint active:scale-95 dark:shadow-lg"
                     aria-label="Send message"
                   >
-                    <svg class="h-6 w-6 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span class="material-symbols-outlined text-xl dark:hidden max-lg:inline" aria-hidden="true">arrow_upward</span>
+                    <span class="material-symbols-outlined hidden text-xl lg:inline dark:!hidden" aria-hidden="true">send</span>
+                    <svg class="hidden h-6 w-6 rotate-90 dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
                   </button>
@@ -426,18 +444,11 @@
     </div>
 
     <template id="chat-welcome-template">
-      <div id="chat-welcome" class="flex animate-fade-in items-start gap-4">
-        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-high shadow-sm">
-          <svg class="h-5 w-5 text-primary-fixed-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
-            />
-          </svg>
+      <div id="chat-welcome" class="flex animate-fade-in items-start gap-3">
+        <div class="chat-avatar-assistant flex h-8 w-8 shrink-0 items-center justify-center">
+          <span class="material-symbols-outlined filled" aria-hidden="true">smart_toy</span>
         </div>
-        <div class="assistant-bubble-shell flex-1 rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-xl">
+        <div class="assistant-bubble-shell chat-assistant-bubble flex-1 border p-4 lg:p-6">
           <p class="body-md leading-relaxed text-on-surface">
             Hi — I’m a <strong class="font-semibold text-on-surface">facts-only</strong> assistant for the HDFC schemes in this pilot. Ask about NAV,
             fees, SIP minimums, and similar details; I’ll answer from retrieved Groww pages. I don’t give advice or predictions.

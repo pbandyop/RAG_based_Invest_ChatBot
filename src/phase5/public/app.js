@@ -47,8 +47,6 @@ function initThemeToggle() {
 
 const SVG_BOT = `<svg class="h-5 w-5 text-primary-fixed-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>`;
 
-const SVG_USER = `<svg class="h-5 w-5 text-primary-fixed-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>`;
-
 /**
  * API base: same origin locally (`Phase 6` + `/ui`). On Vercel, `phase6-api-origin.js` sets Railway so long `/query` calls are not limited by serverless timeouts (504).
  * @param {string} path absolute path e.g. `/query`
@@ -182,44 +180,40 @@ function humanizeGeneratorRoute(route) {
 
 function elAssistantAvatar() {
   const wrap = document.createElement("div");
-  wrap.className =
-    "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-high shadow-sm";
+  const dark = document.documentElement.classList.contains("dark");
+  wrap.className = dark
+    ? "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-high shadow-sm"
+    : "chat-avatar-assistant flex h-8 w-8 shrink-0 items-center justify-center";
   wrap.setAttribute("aria-hidden", "true");
-  wrap.innerHTML = SVG_BOT;
-  return wrap;
-}
-
-function elUserAvatar() {
-  const wrap = document.createElement("div");
-  wrap.className =
-    "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary-container/30 bg-primary-container/20";
-  wrap.setAttribute("aria-hidden", "true");
-  wrap.innerHTML = SVG_USER;
+  wrap.innerHTML = dark
+    ? SVG_BOT
+    : '<span class="material-symbols-outlined filled" aria-hidden="true">smart_toy</span>';
   return wrap;
 }
 
 function appendUserBubble(thread, text) {
   const row = document.createElement("div");
-  row.className = "flex animate-fade-in items-start justify-end gap-4";
+  row.className = "flex animate-fade-in flex-col items-end gap-1 max-w-[85%] self-end";
   row.setAttribute("data-message-role", "user");
   const bubble = document.createElement("div");
-  bubble.className = "max-w-[80%] rounded-2xl border border-outline-variant/50 bg-surface-bright p-4 shadow-md";
+  bubble.className =
+    "chat-user-bubble max-w-full border px-4 py-3 dark:max-w-[80%] dark:rounded-2xl dark:border-outline-variant/50 dark:bg-surface-bright dark:p-4 dark:shadow-md";
   const p = document.createElement("p");
   p.className = "body-md m-0 whitespace-pre-wrap leading-relaxed text-on-surface";
   p.textContent = text;
   bubble.appendChild(p);
   row.appendChild(bubble);
-  row.appendChild(elUserAvatar());
   thread.appendChild(row);
 }
 
 function appendLoadingBubble(thread) {
   const row = document.createElement("div");
-  row.className = "flex animate-fade-in items-start gap-4";
+  row.className = "flex animate-fade-in items-start gap-3 max-w-[90%]";
   row.setAttribute("data-message-role", "assistant");
   row.setAttribute("data-loading", "true");
   const bubble = document.createElement("div");
-  bubble.className = "assistant-bubble-shell flex-1 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-xl";
+  bubble.className =
+    "assistant-bubble-shell chat-assistant-bubble flex-1 border p-4 dark:rounded-2xl dark:bg-surface-container-lowest dark:shadow-xl";
   const span = document.createElement("span");
   span.className = "typing-label";
   span.textContent = "Thinking…";
@@ -309,14 +303,14 @@ function appendParagraph(parent, text) {
 function wrapAssistantShell(card) {
   const shell = document.createElement("div");
   shell.className =
-    "assistant-bubble-shell flex-1 rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-xl";
+    "assistant-bubble-shell chat-assistant-bubble flex-1 border p-4 dark:rounded-2xl dark:bg-surface-container-lowest dark:p-6 dark:shadow-xl";
   shell.appendChild(card);
   return shell;
 }
 
 function appendAssistantResponse(thread, data) {
   const row = document.createElement("div");
-  row.className = "flex animate-fade-in items-start gap-4";
+  row.className = "flex animate-fade-in items-start gap-3 max-w-[90%]";
   row.setAttribute("data-message-role", "assistant");
 
   const card = document.createElement("div");

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e0e3e5",
+                        "background": "#f7f9fb",
+                        "surface-bright": "#f7f9fb",
+                        "inverse-surface": "#2d3133",
+                        "primary-fixed-dim": "#43d8f2",
+                        "outline-variant": "#bbc9cc",
+                        "surface-container": "#eceef0",
+                        "secondary-container": "#d5e0f8",
+                        "surface-container-low": "#f2f4f6",
+                        "on-background": "#191c1e",
+                        "primary-fixed": "#a2eeff",
+                        "surface-dim": "#d8dadc",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-error": "#ffffff",
+                        "primary-container": "#00bdd6",
+                        "on-surface-variant": "#3c494c",
+                        "tertiary-fixed": "#d3e4fe",
+                        "on-primary-fixed": "#001f25",
+                        "surface": "#f7f9fb",
+                        "surface-container-high": "#e6e8ea",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "on-secondary-fixed-variant": "#3c475a",
+                        "secondary": "#545f73",
+                        "secondary-fixed-dim": "#bcc7de",
+                        "on-error-container": "#93000a",
+                        "on-secondary-container": "#586377",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-surface": "#191c1e",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed": "#d8e3fb",
+                        "surface-tint": "#006877",
+                        "on-primary-container": "#004752",
+                        "error": "#ba1a1a",
+                        "on-tertiary-container": "#314156",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-fixed": "#0b1c30",
+                        "outline": "#6c797d",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#9dadc6",
+                        "on-secondary-fixed": "#111c2d",
+                        "inverse-primary": "#43d8f2",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed-variant": "#004e5a",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "primary": "#006877",
+                        "on-primary": "#ffffff",
+                        "tertiary": "#505f76"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "margin-mobile": "16px",
+                        "sm": "8px",
+                        "base": "4px",
+                        "margin-desktop": "32px",
+                        "gutter": "20px",
+                        "lg": "24px",
+                        "md": "16px",
+                        "xl": "32px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Geist"],
+                        "label-md": ["Geist"],
+                        "headline-sm": ["Geist"],
+                        "headline-lg-mobile": ["Geist"],
+                        "headline-md": ["Geist"],
+                        "headline-lg": ["Geist"],
+                        "body-md": ["Geist"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600"}],
+                        "headline-lg": ["30px", {"lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Geist', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- Sidebar Navigation -->
+<aside class="fixed left-0 top-0 h-screen w-64 bg-surface flex flex-col py-6 border-r border-outline-variant">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary">MF Assistant</h1>
+<p class="font-label-md text-label-md text-on-surface-variant">Institutional Portal</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-1 px-2">
+<!-- Active Tab: New Chat -->
+<button class="text-primary font-bold border-l-4 border-primary bg-surface-container flex items-center gap-3 px-4 py-3 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="add_comment">add_comment</span>
+<span class="font-body-md text-body-md">New Chat</span>
+</button>
+<!-- Tab: Recent Conversations -->
+<button class="text-on-surface-variant hover:bg-surface-container-low flex items-center gap-3 px-4 py-3 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="chat">chat</span>
+<span class="font-body-md text-body-md">Recent Conversations</span>
+</button>
+<!-- Accordion: Pilot Corpus -->
+<div class="flex flex-col">
+<button class="text-on-surface-variant hover:bg-surface-container-low flex items-center justify-between gap-3 px-4 py-3 transition-all duration-200">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined" data-icon="database">database</span>
+<span class="font-body-md text-body-md">Pilot Corpus</span>
+</div>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+</div>
+</nav>
+<div class="px-4 flex flex-col gap-1 mt-auto">
+<button class="text-on-surface-variant hover:bg-surface-container-low flex items-center gap-3 px-4 py-3 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-low flex items-center gap-3 px-4 py-3 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-body-md text-body-md">Help Center</span>
+</button>
+<div class="mt-4 pt-4 border-t border-outline-variant">
+<button class="w-full py-2 px-4 rounded-lg text-error hover:bg-error-container transition-all duration-200 flex items-center justify-center gap-2 font-body-md text-body-md">
+<span class="material-symbols-outlined text-[18px]">delete_sweep</span>
+                    Clear Chat History
+                </button>
+</div>
+</div>
+</aside>
+<!-- Main Content Shell -->
+<main class="ml-64 h-screen flex flex-col bg-background">
+<!-- Top App Bar -->
+<header class="h-16 flex justify-between items-center px-6 bg-surface border-b border-outline-variant fixed top-0 right-0 left-64 z-10">
+<h2 class="font-headline-sm text-headline-sm font-bold text-primary">HDFC mutual fund assistant</h2>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:bg-surface-container-low rounded-full p-2 transition-all duration-100">
+<span class="material-symbols-outlined" data-icon="info">info</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-low rounded-full p-2 transition-all duration-100">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Chat Area -->
+<div class="flex-1 mt-16 overflow-y-auto px-6 py-8 flex flex-col gap-6 max-w-4xl mx-auto w-full">
+<!-- User Message -->
+<div class="flex flex-col items-end gap-1 max-w-[80%] self-end">
+<div class="bg-surface-container-low text-on-surface px-4 py-3 rounded-2xl rounded-tr-none border border-outline-variant">
+<p class="font-body-md text-body-md">What is nextleap?</p>
+</div>
+<span class="text-[10px] text-outline px-1">10:42 AM</span>
+</div>
+<!-- Assistant Message -->
+<div class="flex gap-3 max-w-[85%]">
+<div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container mt-1">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="bg-surface-container-lowest text-on-surface px-4 py-3 rounded-2xl rounded-tl-none border border-outline-variant shadow-sm">
+<p class="font-body-md text-body-md">Sorry don't have this information in the corpus.</p>
+</div>
+<span class="text-[10px] text-outline px-1">Assistant · 10:42 AM</span>
+</div>
+</div>
+</div>
+<!-- Footer / Input Area -->
+<footer class="p-6 bg-background">
+<div class="max-w-4xl mx-auto flex flex-col gap-4">
+<!-- Suggestion Chips -->
+<div class="flex flex-wrap gap-2">
+<button class="px-4 py-1.5 rounded-full border border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low text-on-surface-variant font-label-md text-label-md transition-colors">
+                        Explain HDFC Flexi Cap Fund
+                    </button>
+<button class="px-4 py-1.5 rounded-full border border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low text-on-surface-variant font-label-md text-label-md transition-colors">
+                        How to start an SIP?
+                    </button>
+<button class="px-4 py-1.5 rounded-full border border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low text-on-surface-variant font-label-md text-label-md transition-colors">
+                        Tax benefits of ELSS
+                    </button>
+</div>
+<!-- Input Field -->
+<div class="relative group">
+<div class="absolute inset-y-0 left-4 flex items-center pointer-events-none text-outline">
+<span class="material-symbols-outlined">chat_bubble</span>
+</div>
+<input class="w-full pl-12 pr-24 py-4 rounded-xl border border-outline-variant bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary-container/30 focus:border-primary-container transition-all font-body-md text-body-md" placeholder="Type your query here..." type="text"/>
+<div class="absolute inset-y-2 right-2 flex items-center gap-2">
+<button class="p-2 text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined">attach_file</span>
+</button>
+<button class="bg-primary hover:bg-primary-container text-white p-2 rounded-lg transition-all flex items-center justify-center">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+</div>
+<p class="text-center font-label-md text-label-md text-outline">
+                    Powered by HDFC Mutual Fund Knowledge Engine • Pilot Version 2.1
+                </p>
+</div>
+</footer>
+</main>
+</body></html>
