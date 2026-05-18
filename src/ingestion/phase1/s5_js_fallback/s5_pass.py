@@ -103,8 +103,11 @@ def run_s5_on_normalized_dir(
 
         cu = str(doc.get("canonical_url") or doc.get("requested_url") or "")
         low = _needs_low_yield_review(doc)
+        allowlisted = is_allowlisted_groww_url(cu, allow)
+        # Groww scheme pages often ship stale NAV in static HTML; headless text has the live hero.
+        needs_playwright = use_playwright and allowlisted
 
-        if not low:
+        if not low and not needs_playwright:
             doc["p1_s5"] = {
                 "s5_version": S5_VERSION,
                 "status": "skipped_not_low_yield",
@@ -130,11 +133,12 @@ def run_s5_on_normalized_dir(
 
         p1_s5: dict[str, Any] = {
             "s5_version": S5_VERSION,
-            "low_yield": True,
+            "low_yield": low,
             "canonical_url": cu,
+            "allowlisted_scheme_page": allowlisted,
         }
 
-        if not is_allowlisted_groww_url(cu, allow):
+        if not allowlisted:
             p1_s5["status"] = "flagged_not_allowlisted_for_playwright"
             p1_s5["detail"] = "URL not on pilot citation allowlist; headless render skipped."
             doc["p1_s5"] = p1_s5

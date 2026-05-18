@@ -75,17 +75,20 @@ _PERSON_NAME_IN_DETAILS_RE = re.compile(
 
 
 def _normalize_inr_amount(raw: str) -> str:
-    s = re.sub(r"\s+", "", (raw or "").strip())
-    if not s:
+    """Collapse Groww spacing (``1, 436. 33``) and format as ``₹1,436.33``."""
+    compact = re.sub(r"\s+", "", (raw or "").strip()).lstrip("₹")
+    num = re.sub(r"[^\d.]", "", compact)
+    if not num:
         return ""
-    if not s.startswith("₹"):
-        s = f"₹{s}"
-    return s
+    try:
+        return f"₹{float(num):,.2f}"
+    except ValueError:
+        return f"₹{compact}" if compact else ""
 
 
 def _groww_nav_as_of_display(raw: str) -> str | None:
-    """``14 may'26`` → ``14 May 2026`` (scheme-page as-of, not crawl ``fetched_at``)."""
-    t = re.sub(r"\s+", " ", (raw or "").strip().lower())
+    """``14 may'26`` / ``15 - may - 2026`` → ``14 May 2026`` (scheme as-of, not ``fetched_at``)."""
+    t = re.sub(r"[-\s]+", " ", (raw or "").strip().lower())
     t = t.replace("'", " ")
     m = re.match(r"(\d{1,2})\s+([a-z]{3})\s*(\d{2,4})", t)
     if not m:
@@ -101,6 +104,40 @@ def _groww_nav_as_of_display(raw: str) -> str | None:
     return f"{day} {month_name} {year}"
 
 
+def _nav_as_of_sort_key(display: str) -> tuple[int, int, int]:
+    """Sort key for picking the newest NAV as-of date in evidence."""
+    parts = (display or "").split()
+    if len(parts) != 3:
+        return (0, 0, 0)
+    day = int(parts[0]) if parts[0].isdigit() else 0
+    year = int(parts[2]) if parts[2].isdigit() else 0
+    month_name = parts[1].lower()
+    month_num = 0
+    for i, full in enumerate(_MONTH_ABBR_TO_NAME.values(), start=1):
+        if full.lower() == month_name:
+            month_num = i
+            break
+    return (year, month_num, day)
+
+
+# Groww page JSON: ``"nav" : 1436.329, "nav_date" : "15 - may - 2026"``
+_NAV_JSON_PAIR_RE = re.compile(
+    r'"nav\s*"\s*:\s*([\d.\s,]+)\s*,\s*"nav\s*_\s*date\s*"\s*:\s*"\s*([^"]+?)\s*"',
+    re.IGNORECASE,
+)
+
+# Schema / FAQ prose (lower priority than hero or JSON).
+_NAV_PROSE_RE = re.compile(
+    r"\bthe\s+nav\b[^.]{0,220}?₹\s*([\d,\s\.]+)\s+as\s+of\s+(\d{1,2}\s+[a-z]{3,9}\s+\d{4})",
+    re.IGNORECASE,
+)
+# Groww about blurb: ``Latest NAV as of 18 May 2026 is ₹1,430.78``
+_NAV_PROSE_AS_OF_IS_RE = re.compile(
+    r"\b(?:latest\s+)?nav\b[^.]{0,160}?\bas\s+of\s+(\d{1,2}\s+[a-z]{3,9}\s+\d{4})\s+is\s+₹\s*([\d,\s\.]+)",
+    re.IGNORECASE,
+)
+
+
 def _nav_fact_from_match(m: re.Match[str]) -> NavFact | None:
     as_of_display = _groww_nav_as_of_display(m.group(1))
     amount_inr = _normalize_inr_amount(m.group(2))
@@ -110,20 +147,78 @@ def _nav_fact_from_match(m: re.Match[str]) -> NavFact | None:
     return NavFact(amount_inr=amount_inr, as_of_display=as_of_display, source_line=source_line)
 
 
+def _nav_facts_from_blob(blob: str) -> tuple[list[NavFact], list[NavFact], list[NavFact]]:
+    """Return (hero, json_pair, prose) NAV facts found in one text blob."""
+    heroes: list[NavFact] = []
+    json_pairs: list[NavFact] = []
+    prose: list[NavFact] = []
+
+    for m in _GROWW_NAV_HERO_RE.finditer(blob):
+        fact = _nav_fact_from_match(m)
+        if fact:
+            heroes.append(fact)
+
+    for m in _NAV_JSON_PAIR_RE.finditer(blob):
+        as_of = _groww_nav_as_of_display(m.group(2))
+        amount = _normalize_inr_amount(m.group(1))
+        if as_of and amount:
+            src = re.sub(r"\s+", " ", m.group(0)).strip()
+            json_pairs.append(NavFact(amount_inr=amount, as_of_display=as_of, source_line=src))
+
+    for m in _NAV_PROSE_RE.finditer(blob):
+        as_of = _groww_nav_as_of_display(m.group(2))
+        amount = _normalize_inr_amount(m.group(1))
+        if as_of and amount:
+            src = re.sub(r"\s+", " ", m.group(0)).strip()
+            prose.append(NavFact(amount_inr=amount, as_of_display=as_of, source_line=src))
+
+    for m in _NAV_PROSE_AS_OF_IS_RE.finditer(blob):
+        as_of = _groww_nav_as_of_display(m.group(1))
+        amount = _normalize_inr_amount(m.group(2))
+        if as_of and amount:
+            src = re.sub(r"\s+", " ", m.group(0)).strip()
+            prose.append(NavFact(amount_inr=amount, as_of_display=as_of, source_line=src))
+
+    return heroes, json_pairs, prose
+
+
+def _pick_latest_nav(facts: list[NavFact]) -> NavFact | None:
+    if not facts:
+        return None
+    return max(facts, key=lambda f: _nav_as_of_sort_key(f.as_of_display))
+
+
 def extract_nav_fact_from_contexts(contexts: list[str]) -> NavFact | None:
-    """Parse NAV + as-of date from retrieved scheme-page text (first hero line wins)."""
+    """
+    Parse NAV from Groww scheme-page evidence.
+
+    Priority: visible hero ``nav : <date> ₹…`` (newest date if several), then JSON
+    ``nav`` + ``nav_date``, then FAQ prose. Ignores stale FAQ if a newer hero exists.
+    """
+    heroes: list[NavFact] = []
+    json_pairs: list[NavFact] = []
+    prose: list[NavFact] = []
+
     for c in contexts:
         blob = _prepare_blob([c])
-        m = _GROWW_NAV_HERO_RE.search(blob)
-        if m:
-            fact = _nav_fact_from_match(m)
-            if fact:
-                return fact
-    blob = _prepare_blob(contexts)
-    m = _GROWW_NAV_HERO_RE.search(blob)
-    if m:
-        return _nav_fact_from_match(m)
-    return None
+        h, j, p = _nav_facts_from_blob(blob)
+        heroes.extend(h)
+        json_pairs.extend(j)
+        prose.extend(p)
+
+    picked = _pick_latest_nav(heroes)
+    if picked:
+        return picked
+    picked = _pick_latest_nav(json_pairs)
+    if picked:
+        return picked
+    return _pick_latest_nav(prose)
+
+
+def extract_nav_fact_from_hits(hits: list[Any]) -> NavFact | None:
+    """Parse NAV from all retrieved chunks (not only the first context slice)."""
+    texts = [str(h.text or "") for h in hits if str(h.text or "").strip()]
+    return extract_nav_fact_from_contexts(texts)
 
 
 def _normalize_person_name(raw: str) -> str:

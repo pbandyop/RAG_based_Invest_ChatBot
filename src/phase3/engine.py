@@ -16,6 +16,7 @@ from phase3.retrieval_utils import (
     load_phase3_defaults,
     max_fetched_at_iso,
     merge_manager_anchor_hits,
+    merge_nav_anchor_hits,
     merge_stat_anchor_hits,
     prioritize_hero_stat_chunks,
     query_is_pilot_scope,
@@ -31,6 +32,8 @@ from phase3.synthesize import (
     contexts_from_hits,
     extract_fund_managers_from_contexts,
     extract_nav_fact_from_contexts,
+    extract_nav_fact_from_hits,
+    format_nav_answer,
     fund_label_for_answer,
     groq_api_configured,
     shape_answer_for_query,
@@ -154,6 +157,7 @@ class FaqRagEngine:
             if not matching:
                 return self._refusal("refusal_out_of_corpus")
             hits = merge_stat_anchor_hits(self.bundle, matching, sid_filter, query)
+            hits = merge_nav_anchor_hits(self.bundle, hits, sid_filter, query)
             hits = merge_manager_anchor_hits(self.bundle, hits, sid_filter, query)
             hits = prioritize_hero_stat_chunks(hits, query)
 
@@ -223,8 +227,6 @@ class FaqRagEngine:
             models_try.append(model_fb)
 
         model = model_primary
-        route = "extractive"
-        answer_text = ""
 
         evidence_blocks = []
         for h in hits[:max_ctx]:
@@ -244,9 +246,11 @@ class FaqRagEngine:
         nav_fact: NavFact | None = None
         manager_fact: FundManagementFact | None = None
         if nav_focus_only_query(query):
-            nav_fact = extract_nav_fact_from_contexts(contexts)
+            nav_fact = extract_nav_fact_from_hits(hits) or extract_nav_fact_from_contexts(contexts)
         if fund_manager_focus_query(query):
             manager_fact = extract_fund_managers_from_contexts(contexts)
+
+        use_nav_direct = bool(nav_focus_only_query(query) and nav_fact is not None)
 
         def _shape(answer_text: str) -> str:
             return shape_answer_for_query(
@@ -267,7 +271,13 @@ class FaqRagEngine:
         use_groq = groq_api_configured()
         llm_obj: dict[str, Any] | None = None
         groq_model_used: str | None = None
-        if use_groq:
+        route = "extractive"
+        answer_text = ""
+
+        if use_nav_direct and nav_fact is not None:
+            answer_text = format_nav_answer(fund_label, nav_fact)
+            route = "nav_scheme_page"
+        elif use_groq:
             groq_retry_hints: list[str | None] = [
                 None,
                 "Return exactly one JSON object with keys answer, citation_url, scheme_id. "
@@ -302,18 +312,19 @@ class FaqRagEngine:
                 if llm_obj:
                     break
 
-        else:
+        elif not use_nav_direct:
             _log.info("phase3_synthesize groq=0 (no GROQ_API_KEY in .env / environment after dotenv)")
 
-        if isinstance(llm_obj, dict) and llm_obj.get("answer"):
+        if not use_nav_direct and isinstance(llm_obj, dict) and llm_obj.get("answer"):
             answer_text, citation_url, sid = self._apply_llm_dict(llm_obj, citation_url=citation_url, sid=sid)
             route = "groq" if groq_model_used == models_try[0] else "groq_fallback"
 
-        if not answer_text:
+        if not use_nav_direct and not answer_text:
             answer_text = _extractive_from_contexts(query, contexts)
             route = "extractive"
 
-        answer_text = _shape(answer_text)
+        if not use_nav_direct:
+            answer_text = _shape(answer_text)
 
         ok, reason = grounding_ok(
             answer=answer_text,

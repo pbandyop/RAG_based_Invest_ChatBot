@@ -378,6 +378,42 @@ def same_scheme_manager_fallback(
     return out
 
 
+_NAV_ANCHOR_QUERY = "nav : min. for sip fund size aum expense ratio"
+
+
+def merge_nav_anchor_hits(
+    bundle: Any,
+    hits: list[SearchHit],
+    scheme_id: str,
+    query: str,
+    *,
+    extra_k: int = 48,
+) -> list[SearchHit]:
+    """Ensure the Groww hero NAV line is present for same-scheme NAV questions."""
+    sid = scheme_id.strip()
+    if not sid or not re.search(r"\b(nav|n\.a\.v\.)\b", (query or "").lower()):
+        return hits
+
+    seen: dict[str, SearchHit] = {h.chunk_id: h for h in hits}
+    try:
+        raw2 = bundle.search(_NAV_ANCHOR_QUERY, k=extra_k)
+    except Exception:
+        return hits
+
+    for h in raw2:
+        if str(h.metadata.get("scheme_id") or "") != sid:
+            continue
+        t = (h.text or "").lower()
+        if "nav :" not in t or "min." not in t:
+            continue
+        if h.chunk_id not in seen:
+            seen[h.chunk_id] = h
+
+    merged = list(seen.values())
+    merged.sort(key=lambda x: -x.score)
+    return merged
+
+
 def merge_stat_anchor_hits(
     bundle: Any,
     hits: list[SearchHit],
