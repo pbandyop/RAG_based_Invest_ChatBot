@@ -192,8 +192,20 @@ Chunking applies to **normalized text** produced after **P1-S4** (not to raw `fe
 
 ### 5.3 Embedding model
 
-- Choose a single embedding model for the pilot; document version in README.
-- **Refresh policy:** Re-embed when raw text changes (hash change).
+| Item | Pilot value |
+|------|-------------|
+| **Model** | [`BAAI/bge-small-en-v1.5`](https://huggingface.co/BAAI/bge-small-en-v1.5) (BGE small, English) |
+| **Library** | [`sentence-transformers`](https://www.sbert.net/) (`SentenceTransformer.encode`) |
+| **Vector dimension** | **384** (recorded in each index `manifest.json` as `vector_dim`) |
+| **Similarity** | **Cosine** via **L2-normalized** embeddings + **FAISS `IndexFlatIP`** (inner product on unit vectors) |
+| **Config** | Default in [`config/phase2/defaults.json`](../config/phase2/defaults.json); override at build time with `scripts/run_phase2_build_index.py --model <id>` |
+| **Index manifest** | Each bundle under `data/phase2/index/{run_id}/manifest.json` stores `embedding_model`, chunking params, and `built_at_utc` for audit |
+
+**Build-time behavior:** Phase 2 loads the model once, chunks normalized P1 text (see §5.1), embeds all chunk texts in batches, and writes `index.faiss` plus `chunk_metadata.json` / `chunks.jsonl`. The same model id must be used at query time (Phase 3 loads it from the bundle manifest — see §6.1).
+
+**Refresh policy:** Re-embed when normalized corpus text changes (new crawl `run_id` or `chunk_fingerprint_sha256` change in manifest). Do not mix embeddings from different models in one FAISS index.
+
+**Optional:** Set **`HF_TOKEN`** when building in CI so Hugging Face Hub downloads are faster and rate limits are higher (see §9.5).
 
 ### 5.4 Phase gate
 
@@ -208,7 +220,7 @@ Chunking applies to **normalized text** produced after **P1-S4** (not to raw `fe
 ### 6.1 Retrieval
 
 - **Input:** User query (and optional scheme hint from UI).
-- **Process:** Embed query → vector search (top-k, e.g., k=5–10) → optional **MMR** or diversity to reduce duplicate pages.
+- **Process:** Load the Phase 2 bundle’s **`embedding_model`** from `manifest.json` (pilot: **`BAAI/bge-small-en-v1.5`**) → embed the query with the same `SentenceTransformer` settings (**normalized** vectors) → **FAISS** inner-product search (top-k, e.g., k=12 in `config/phase3/defaults.json`) → optional scheme filters, URL dedupe, and anchor merges (see Phase 3 implementation).
 - **Output:** Ordered list of chunks with scores + metadata (must include `source_url`, `fetched_at`).
 
 ### 6.2 Citation selection
@@ -325,7 +337,7 @@ For **repeatable “latest data”** without a human shell, use **GitHub Actions
 |--------|-------------------------|
 | **What to run** | **P1-S1** (crawl plan) → **P1-S2/S3** (fetch + raw store) → **P1-S4** (normalize) → **Phase 2** (chunk + embed + FAISS). Same order as [`README.md`](../README.md). Each successful run produces a new **`run_id`** under `data/phase1/` / `data/phase2/index/` so `fetched_at_utc` and “last updated” move forward honestly. |
 | **Schedule** | Use `on.schedule` (e.g. **weekly**) unless the AMC / site policy explicitly allows higher frequency. Aggressive polling can violate **robots.txt**, strain origins, and trigger blocks. |
-| **Secrets** | **`HF_TOKEN`** (optional): higher Hugging Face Hub rate limits when downloading the embedding model in Phase 2. **`GROQ_API_KEY`**: Phase 3 grounded JSON generation via Groq (not required for ingest/index; extractive fallback if unset). Do **not** store PAN/Aadhaar or account identifiers in secrets or logs (Phase 0 logging policy). |
+| **Secrets** | **`HF_TOKEN`** (optional): higher Hugging Face Hub rate limits when downloading **`BAAI/bge-small-en-v1.5`** in Phase 2. **`GROQ_API_KEY`**: Phase 3 grounded JSON generation via Groq (not required for ingest/index; extractive fallback if unset). Do **not** store PAN/Aadhaar or account identifiers in secrets or logs (Phase 0 logging policy). |
 | **Where outputs go** | **Do not assume** large `data/` trees belong in git. Prefer **`actions/upload-artifact`**, a release asset, or **object storage** (S3, GCS, Azure Blob) keyed by `run_id` / commit / date. Keep **artifact retention** short unless compliance requires longer archival. |
 | **Runtime** | Phase 2 (torch + `sentence-transformers` + FAISS) is **CPU-heavy** and may **download models** on cold runners; set a generous **`timeout-minutes`** and enable **pip / Hugging Face caching** between runs. |
 | **Compliance** | Respect **robots.txt** and manifest allowlists in production; treat **`--skip-robots` / `--insecure-ssl`** as **dev-only** (see Phase 1 notes in this doc). If CI egress to `groww.in` is disallowed, run the job on an approved runner or substitute a manual refresh process. |
