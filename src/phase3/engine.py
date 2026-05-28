@@ -5,6 +5,12 @@ from pathlib import Path
 from typing import Any
 
 from phase2.retrieve import IndexBundle, load_index_bundle
+from phase3.corpus_support import (
+    answer_topic_mismatch,
+    format_insufficient_answer,
+    llm_answer_indicates_insufficient,
+    query_supported_by_evidence,
+)
 from phase3.grounding import fund_manager_focus_query, grounding_ok, nav_focus_only_query
 from phase3.models import Phase3Response
 from phase3.phase0_config import Phase0RuntimeConfig, load_phase0_runtime
@@ -33,7 +39,6 @@ from phase3.synthesize import (
     extract_fund_managers_from_contexts,
     extract_nav_fact_from_contexts,
     extract_nav_fact_from_hits,
-    format_nav_answer,
     fund_label_for_answer,
     groq_api_configured,
     shape_answer_for_query,
@@ -108,6 +113,42 @@ class FaqRagEngine:
         if cit in self.p0.citation_urls_normalized:
             citation_url = cit
         return answer_text, citation_url, sid
+
+    def _insufficient_evidence_response(
+        self,
+        *,
+        query: str,
+        scheme_id: str,
+        evidence_rows: list[dict[str, Any]],
+        scores: list[float],
+        chunk_ids: list[str],
+        footer_date: str | None,
+    ) -> Phase3Response:
+        answer = format_insufficient_answer(
+            query=query,
+            scheme_id=scheme_id,
+            schemes=self.p0.schemes,
+        )
+        footer_line = (
+            f"Last updated from sources: {footer_date}" if footer_date else "Last updated from sources: (unknown)"
+        )
+        return Phase3Response(
+            refusal=False,
+            answer=answer,
+            citation_url=None,
+            last_updated=footer_date,
+            footer_line=footer_line,
+            scheme_id=scheme_id if scheme_id in self.p0.scheme_id_to_citation else None,
+            educational_url=None,
+            educational_label=None,
+            refusal_template_key=None,
+            needs_scheme_clarification=False,
+            clarification_message=None,
+            generator_route="insufficient_evidence",
+            evidence=evidence_rows,
+            retrieval_scores=scores,
+            chunk_ids_used=chunk_ids,
+        )
 
     def answer(self, query: str, scheme_id: str | None = None) -> Phase3Response:
         guard: GuardResult = evaluate_query_guard(query)
@@ -250,7 +291,17 @@ class FaqRagEngine:
         if fund_manager_focus_query(query):
             manager_fact = extract_fund_managers_from_contexts(contexts)
 
-        use_nav_direct = bool(nav_focus_only_query(query) and nav_fact is not None)
+        if sid in self.p0.scheme_id_to_citation and not query_supported_by_evidence(
+            query, contexts, self.p0.schemes
+        ):
+            return self._insufficient_evidence_response(
+                query=query,
+                scheme_id=sid,
+                evidence_rows=evidence_rows,
+                scores=scores,
+                chunk_ids=chunk_ids,
+                footer_date=footer_date,
+            )
 
         def _shape(answer_text: str) -> str:
             return shape_answer_for_query(
@@ -274,10 +325,7 @@ class FaqRagEngine:
         route = "extractive"
         answer_text = ""
 
-        if use_nav_direct and nav_fact is not None:
-            answer_text = format_nav_answer(fund_label, nav_fact)
-            route = "nav_scheme_page"
-        elif use_groq:
+        if use_groq:
             groq_retry_hints: list[str | None] = [
                 None,
                 "Return exactly one JSON object with keys answer, citation_url, scheme_id. "
@@ -312,19 +360,32 @@ class FaqRagEngine:
                 if llm_obj:
                     break
 
-        elif not use_nav_direct:
+        else:
             _log.info("phase3_synthesize groq=0 (no GROQ_API_KEY in .env / environment after dotenv)")
 
-        if not use_nav_direct and isinstance(llm_obj, dict) and llm_obj.get("answer"):
+        if isinstance(llm_obj, dict) and llm_obj.get("answer"):
             answer_text, citation_url, sid = self._apply_llm_dict(llm_obj, citation_url=citation_url, sid=sid)
             route = "groq" if groq_model_used == models_try[0] else "groq_fallback"
 
-        if not use_nav_direct and not answer_text:
+        if not answer_text:
             answer_text = _extractive_from_contexts(query, contexts)
             route = "extractive"
 
-        if not use_nav_direct:
-            answer_text = _shape(answer_text)
+        answer_text = _shape(answer_text)
+
+        if (
+            llm_answer_indicates_insufficient(answer_text)
+            or answer_topic_mismatch(query, answer_text, self.p0.schemes)
+            or not query_supported_by_evidence(query, contexts, self.p0.schemes)
+        ):
+            return self._insufficient_evidence_response(
+                query=query,
+                scheme_id=sid,
+                evidence_rows=evidence_rows,
+                scores=scores,
+                chunk_ids=chunk_ids,
+                footer_date=footer_date,
+            )
 
         ok, reason = grounding_ok(
             answer=answer_text,

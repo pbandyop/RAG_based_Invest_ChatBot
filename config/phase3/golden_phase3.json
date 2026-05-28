@@ -21,6 +21,19 @@
       "scheme_id": "hdfc_mid_cap_direct_growth",
       "expect": "answer",
       "citation_must_include_scheme_host": "groww.in"
+    },
+    {
+      "id": "midcap_unknown_poda",
+      "query": "What is poda of HDFC mid cap fund?",
+      "scheme_id": "hdfc_mid_cap_direct_growth",
+      "expect": "answer",
+      "answer_must_contain_any": [
+        "does not include",
+        "cannot answer",
+        "pilot corpus"
+      ],
+      "generator_route": "insufficient_evidence",
+      "citation_url_must_be_null": true
     }
   ]
 }

@@ -337,10 +337,8 @@ def shape_answer_for_query(
     manager_fact: FundManagementFact | None = None,
     fund_label: str | None = None,
 ) -> str:
-    """Truncate, polish, intent-based span; grounded NAV / fund-manager facts override LLM prose."""
+    """Truncate, polish, intent-based span; grounded fund-manager facts may override LLM prose."""
     label = fund_label or "the fund"
-    if nav_focus_only_query(query) and nav_fact is not None:
-        return format_nav_answer(label, nav_fact)
     if fund_manager_focus_query(query) and manager_fact is not None and manager_fact.names:
         return format_fund_manager_answer(label, manager_fact)
     out = truncate_to_max_sentences(answer_text, 3)
@@ -757,6 +755,8 @@ def try_groq_json_answer(
         "EVIDENCE — the ``fund_manager_details`` list with ``person_name`` entries. List every current manager "
         "shown there. Do **not** use stale top-level ``fund_manager`` metadata strings if ``fund_manager_details`` "
         "or Fund Management headings list different people. "
+        "If the USER_QUESTION names a term or concept that does not appear in EVIDENCE (for example an unknown "
+        "abbreviation or attribute), do not answer with a different fact from EVIDENCE (such as fund manager or NAV). "
         "If the requested information does not appear in any excerpt (or only appears in a way you cannot state "
         "faithfully without adding unsupported detail), respond with a single sentence that the evidence is "
         "insufficient — e.g. that the retrieved corpus does not contain enough to answer. "

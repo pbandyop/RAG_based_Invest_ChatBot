@@ -83,8 +83,29 @@ def main() -> int:
             failed += 1
             continue
 
+        route_need = case.get("generator_route")
+        if route_need and str(resp.generator_route or "") != str(route_need):
+            print(f"FAIL {cid}: expected route {route_need!r}, got {resp.generator_route!r}")
+            failed += 1
+            continue
+
+        if case.get("citation_url_must_be_null") and resp.citation_url:
+            print(f"FAIL {cid}: expected no citation_url, got {resp.citation_url!r}")
+            failed += 1
+            continue
+
+        must_any = case.get("answer_must_contain_any") or []
+        if must_any:
+            ans_low = (resp.answer or "").lower()
+            if not any(str(frag).lower() in ans_low for frag in must_any):
+                print(f"FAIL {cid}: answer missing any of {must_any!r}")
+                failed += 1
+                continue
+
         cu = normalize_citation_url(str(resp.citation_url or ""))
-        if cu not in allow:
+        if case.get("citation_url_must_be_null"):
+            pass
+        elif cu not in allow:
             print(f"FAIL {cid}: citation not on allowlist: {resp.citation_url!r}")
             failed += 1
             continue
