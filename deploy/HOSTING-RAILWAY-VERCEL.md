@@ -99,7 +99,17 @@ When the Railway URL changes, update **`RAILWAY_API_URL`** in Vercel and **redep
 
 ### Deploy
 
-- Connect the GitHub repo, set **Root Directory** to **`frontend`**, set **`RAILWAY_API_URL`**, deploy, then test the Vercel URL.
+- Connect the GitHub repo, set **Root Directory** to **`frontend`** (recommended), set **`RAILWAY_API_URL`**, deploy, then test the Vercel URL.
+- **Alternative:** leave **Root Directory empty** — the repo-root [`vercel.json`](../vercel.json) runs `npm run build --prefix frontend`, copies `frontend/api` → `api` for serverless routes, and serves `frontend/public`.
+
+### Troubleshooting: `404 NOT_FOUND` on Vercel
+
+| Symptom | Fix |
+|--------|-----|
+| Root URL shows Vercel `404: NOT_FOUND` | Wrong project URL or empty deployment. Production URL: **https://rag-based-invest-chat-bot-ec6i.vercel.app/** |
+| Duplicate Vercel projects on same repo | Use one project; set **Root Directory = `frontend`** *or* leave empty (root `vercel.json`). Delete or disable the unused project. |
+| Build succeeds but `/` is empty | Ensure `src/phase5/public` exists in the repo and `npm run build` in `frontend/` produces `public/index.html`. Tracked `frontend/public/` is committed as a fallback. |
+| Chat works locally but not on Vercel | Set **`RAILWAY_API_URL`** for **Production** (and Preview if needed) so the **build** embeds Railway in `phase6-api-origin.js`, then redeploy. |
 
 ---
 

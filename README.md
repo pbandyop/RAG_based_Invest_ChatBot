@@ -1,5 +1,7 @@
 # Mutual Fund FAQ Assistant (Groww HDFC pilot)
-Check out the online app at https://rag-based-invest-chat-bot-ec6i.vercel.app/ (Frontend is deployed in Vercel, backend is deployed in Railway. Groq (llama-3.3-70b-versatile) a light weight model is used as I wanted something free. The whole application is developed using Cursor.
+Check out the online app at **https://rag-based-invest-chat-bot-ec6i.vercel.app/** (Frontend on Vercel, backend on Railway. Groq `llama-3.3-70b-versatile` is used as a lightweight free model. The application was developed using Cursor.)
+
+> **Vercel 404?** Use the URL above (`-ec6i`). If you deploy from this repo, either set **Root Directory = `frontend`** in Vercel, or leave Root Directory empty — root [`vercel.json`](vercel.json) builds `frontend/public` automatically. Set **`RAILWAY_API_URL`** on Vercel and redeploy.
 
 ## Environment variables
 

@@ -1,3 +1,3 @@
-# Generated from src/phase5/public at build time (Vercel + npm run build)
-public/
+# Tracked copy of src/phase5/public (refreshed via npm run build) — kept in git so Vercel
+# always has static assets even if the build step is skipped or misconfigured.
 node_modules/

@@ -14,6 +14,8 @@ data/phase2/index/*
 !data/phase2/index/groww-hdfc-pilot-v1__422a8bf8c13836c8/**
 # Node (Vercel proxy only; no lockfile yet)
 node_modules/
+# Copied from frontend/api during root-level Vercel build (scripts/vercel-link-api.mjs)
+api/
 
 # Python
 __pycache__/

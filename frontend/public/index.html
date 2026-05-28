@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html class="h-full dark" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HDFC Mutual Fund Chat Assistant — pilot</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=JetBrains+Mono:wght@400..600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script>
+      (function () {
+        try {
+          if (localStorage.getItem("nextleap_groww_theme") === "light") {
+            document.documentElement.classList.remove("dark");
+          }
+        } catch (_) {
+          /* ignore */
+        }
+      })();
+    </script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "error-container": "#93000a",
+              "surface-container-highest": "#273647",
+              "on-background": "#d4e4fa",
+              "inverse-primary": "#006875",
+              "on-surface": "#d4e4fa",
+              "surface-bright": "#2c3a4c",
+              "tertiary-container": "#fec931",
+              secondary: "#b7c8e1",
+              "on-primary": "#00363d",
+              "surface-dim": "#051424",
+              outline: "#849396",
+              "on-tertiary-fixed": "#251a00",
+              "on-tertiary": "#3e2e00",
+              "surface-tint": "#00daf3",
+              "inverse-on-surface": "#233143",
+              "on-secondary-container": "#a9bad3",
+              surface: "#051424",
+              background: "#051424",
+              "secondary-fixed": "#d3e4fe",
+              "on-primary-container": "#00626e",
+              "secondary-fixed-dim": "#b7c8e1",
+              "primary-container": "#00e5ff",
+              primary: "#c3f5ff",
+              "surface-container-low": "#0d1c2d",
+              "on-secondary-fixed": "#0b1c30",
+              "on-error": "#690005",
+              "outline-variant": "#3b494c",
+              "surface-container-high": "#1c2b3c",
+              "surface-container-lowest": "#010f1f",
+              "inverse-surface": "#d4e4fa",
+              error: "#ffb4ab",
+              "on-error-container": "#ffdad6",
+              "primary-fixed": "#9cf0ff",
+              "primary-fixed-dim": "#00daf3",
+              "tertiary-fixed-dim": "#f3bf26",
+              "surface-variant": "#273647",
+              "on-surface-variant": "#bac9cc",
+              "surface-container": "#122131",
+              "on-secondary-fixed-variant": "#38485d",
+              "on-primary-fixed-variant": "#004f58",
+              "secondary-container": "#3a4a5f",
+              "tertiary-fixed": "#ffdf96",
+              "on-tertiary-fixed-variant": "#594400",
+              "on-primary-fixed": "#001f24",
+              "on-tertiary-container": "#6f5500",
+              "on-secondary": "#213145",
+              tertiary: "#ffeac0",
+            },
+            borderRadius: {
+              DEFAULT: "0.125rem",
+              lg: "0.25rem",
+              xl: "0.5rem",
+              full: "0.75rem",
+            },
+            spacing: {
+              "margin-desktop": "32px",
+              "margin-mobile": "16px",
+              base: "4px",
+              md: "16px",
+              lg: "24px",
+              sm: "12px",
+              xl: "32px",
+              xs: "8px",
+              gutter: "16px",
+            },
+            fontFamily: {
+              sans: ["Geist", "system-ui", "sans-serif"],
+              mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="h-full overflow-hidden bg-background font-sans text-on-background antialiased">
+    <div class="flex h-full">
+      <div
+        class="sidebar-overlay fixed inset-0 z-40 hidden bg-black/60 transition-opacity lg:hidden"
+        id="sidebar-overlay"
+        aria-hidden="true"
+      ></div>
+
+      <aside
+        class="sidebar fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 -translate-x-full flex-col border-r border-outline-variant bg-surface-container py-6 transition-transform lg:relative lg:w-64 lg:translate-x-0"
+        id="sidebar"
+        data-purpose="navigation-sidebar"
+      >
+        <div class="sidebar-brand mb-8 px-6">
+          <div class="flex items-center gap-3">
+            <div
+              class="sidebar-brand-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-fixed-dim"
+              aria-hidden="true"
+            >
+              <span class="material-symbols-outlined filled text-base text-white">account_balance</span>
+            </div>
+            <div>
+              <h1 class="text-base font-bold leading-tight text-primary">MF Assistant</h1>
+              <p class="text-xs font-medium text-on-surface-variant">Institutional Portal</p>
+            </div>
+          </div>
+        </div>
+        <nav class="flex flex-1 flex-col gap-1 px-2">
+          <button
+            type="button"
+            id="new-chat-btn"
+            class="btn-new-chat nav-item mb-2 flex w-full items-center gap-3 px-4 py-3 text-left transition-all duration-200"
+          >
+            <span class="material-symbols-outlined text-xl" aria-hidden="true">add_comment</span>
+            <span class="text-sm font-bold">New chat</span>
+          </button>
+          <span class="nav-item-active flex items-center gap-3 px-4 py-3" aria-current="page">
+            <span class="material-symbols-outlined text-xl" aria-hidden="true">chat</span>
+            <span class="text-sm font-bold">Chat</span>
+          </span>
+
+          <div class="pt-3">
+            <p class="px-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-outline">Recent</p>
+            <ul id="chat-sessions-list" class="max-h-36 space-y-0.5 overflow-y-auto pr-0.5 lg:max-h-44" aria-label="Saved conversations"></ul>
+          </div>
+          <div class="pt-4">
+            <button
+              type="button"
+              id="corpus-nav-toggle"
+              class="nav-item group flex w-full items-center justify-between px-4 py-3 text-on-surface-variant transition-colors hover:text-on-surface"
+              aria-expanded="false"
+              aria-controls="corpus-nav-panel"
+            >
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-xl" aria-hidden="true">database</span>
+                <span class="text-sm font-medium">Pilot corpus</span>
+              </div>
+              <svg class="corpus-chevron h-4 w-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div
+              id="corpus-nav-panel"
+              class="mt-2 hidden max-h-52 overflow-y-auto rounded-lg border border-outline-variant/50 bg-surface-container-low/90 py-1 pl-2 pr-1"
+              role="region"
+              aria-label="Funds in pilot corpus"
+            >
+              <ul id="corpus-fund-list" class="m-0 list-none space-y-0.5 p-0"></ul>
+            </div>
+          </div>
+
+          <div class="pt-4">
+            <button
+              type="button"
+              id="theme-toggle-btn"
+              class="nav-item group flex w-full items-center gap-3 px-4 py-3 text-on-surface-variant transition-colors hover:text-on-surface"
+              aria-label="Switch to light mode"
+            >
+              <svg
+                id="theme-toggle-icon-light"
+                class="theme-toggle-icon h-5 w-5 hidden"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                />
+              </svg>
+              <svg
+                id="theme-toggle-icon-dark"
+                class="theme-toggle-icon h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                />
+              </svg>
+              <span id="theme-toggle-label" class="text-sm font-medium">Light mode</span>
+            </button>
+          </div>
+
+          <div class="mt-auto border-t border-outline-variant px-4 pt-4">
+            <button
+              type="button"
+              id="clear-chat-btn"
+              class="btn-clear-history flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200"
+              aria-label="Delete the current conversation only"
+            >
+              <span class="material-symbols-outlined text-lg" aria-hidden="true">delete_sweep</span>
+              <span>Clear chat history</span>
+            </button>
+          </div>
+        </nav>
+        <div class="hidden border-t border-outline-variant px-6 py-4 lg:block">
+          <p class="text-[10px] font-medium leading-relaxed text-outline">Facts-only • descriptive • no accounts</p>
+        </div>
+      </aside>
+
+      <main class="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-background lg:pt-16" data-purpose="main-chat">
+        <header
+          class="desktop-app-bar fixed top-0 right-0 z-10 hidden h-16 items-center justify-between border-b border-outline-variant bg-surface-container px-6 lg:left-64 lg:flex"
+          data-purpose="desktop-app-bar"
+        >
+          <h2 class="text-xl font-bold text-primary">HDFC Mutual Fund Assistant</h2>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container-low"
+              aria-label="About this pilot"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            </button>
+            <button
+              type="button"
+              class="rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container-low"
+              aria-label="Account"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">account_circle</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="mobile-top-bar flex h-16 items-center justify-between border-b border-outline-variant bg-surface-container-lowest px-4 lg:hidden">
+          <button
+            type="button"
+            id="sidebar-open-btn"
+            class="rounded-lg p-2 text-on-surface transition-colors hover:bg-surface-bright"
+            aria-label="Open menu"
+          >
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <h2 class="text-sm font-bold tracking-tight text-primary">HDFC ASSISTANT</h2>
+          <button
+            type="button"
+            id="corpus-mobile-open"
+            class="rounded-lg p-2 text-on-surface transition-colors hover:bg-surface-bright"
+            aria-label="Pilot fund list"
+            aria-haspopup="dialog"
+            aria-controls="corpus-mobile-sheet"
+          >
+            <svg class="h-6 w-6 text-primary-fixed-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <header class="main-header-centered shrink-0 px-4 pb-4 pt-6 text-center dark:lg:pt-8" data-purpose="main-header">
+          <h2 class="text-2xl font-bold tracking-tight text-primary-fixed-dim">HDFC Mutual Fund Assistant</h2>
+          <p class="mt-1 text-sm font-medium text-on-surface-variant">Chat with facts from our Groww pilot corpus</p>
+          <div class="mt-6 flex justify-center">
+            <div class="disclaimer-pill flex items-center gap-2 rounded-full border px-4 py-1.5">
+              <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span id="disclaimer-text" class="text-[11px] font-semibold">Loading…</span>
+            </div>
+          </div>
+        </header>
+
+        <div
+          class="light-disclaimer-banner mx-4 mb-4 mt-2 flex items-start gap-4 rounded-xl border border-outline-variant/30 p-4 lg:mx-auto lg:mt-4 lg:max-w-3xl"
+          role="note"
+        >
+          <span class="material-symbols-outlined mt-0.5 shrink-0" aria-hidden="true">verified_user</span>
+          <div>
+            <h3 class="mb-1 text-xs font-semibold uppercase tracking-wider">Facts-only assistant</h3>
+            <p class="m-0 text-sm leading-relaxed">
+              Verified data from official HDFC scheme pages on Groww. No financial advice or market predictions.
+            </p>
+          </div>
+        </div>
+
+        <div id="chat-thread" class="min-h-0 flex-1 overflow-y-auto" data-purpose="chat-scroll" aria-label="Chat transcript">
+          <div id="chat-thread-messages" class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 lg:gap-8" role="log" aria-relevant="additions">
+            <div id="chat-welcome" class="flex animate-fade-in items-start gap-3">
+              <div class="chat-avatar-assistant flex h-8 w-8 shrink-0 items-center justify-center">
+                <span class="material-symbols-outlined filled" aria-hidden="true">smart_toy</span>
+              </div>
+              <div class="assistant-bubble-shell chat-assistant-bubble flex-1 border p-4 lg:p-6">
+                <p class="body-md leading-relaxed text-on-surface">
+                  Hi — I’m a <strong class="font-semibold text-on-surface">facts-only</strong> assistant for the HDFC schemes in this pilot. Ask
+                  about NAV, fees, SIP minimums, and similar details; I’ll answer from retrieved Groww pages. I don’t give advice or predictions.
+                </p>
+                <div class="mt-4 border-t border-outline-variant/50 pt-4">
+                  <p class="flex items-center gap-2 text-sm italic text-on-surface-variant">
+                    <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Tip: name the fund in your message, or pick one from the corpus list in the sidebar.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer id="chat-composer" class="chat-composer-footer shrink-0 bg-gradient-to-t from-background via-background to-transparent px-4 pb-6 pt-4 lg:pb-10" data-purpose="input-section">
+          <div class="mx-auto max-w-3xl space-y-4">
+            <div class="flex flex-wrap justify-center gap-2" role="group" aria-label="Suggested prompts">
+              <button
+                type="button"
+                class="btn-example rounded-full border border-outline-variant bg-surface-container-low px-3 py-1.5 text-[11px] font-medium text-on-surface-variant transition-all hover:border-primary-fixed-dim hover:text-on-surface"
+                data-query="What is the expense ratio for HDFC TaxSaver (ELSS) Direct Growth?"
+              >
+                ELSS • expense ratio
+              </button>
+              <button
+                type="button"
+                class="btn-example rounded-full border border-outline-variant bg-surface-container-low px-3 py-1.5 text-[11px] font-medium text-on-surface-variant transition-all hover:border-primary-fixed-dim hover:text-on-surface"
+                data-query="What is the minimum SIP amount for HDFC Mid-Cap Fund Direct Growth?"
+              >
+                Mid-cap • SIP
+              </button>
+              <button
+                type="button"
+                class="btn-example rounded-full border border-outline-variant bg-surface-container-low px-3 py-1.5 text-[11px] font-medium text-on-surface-variant transition-all hover:border-primary-fixed-dim hover:text-on-surface"
+                data-query="What is the exit load for HDFC Large Cap Fund Direct Growth?"
+              >
+                Large-cap • exit load
+              </button>
+            </div>
+
+            <form id="query-form" class="space-y-2" novalidate>
+              <div class="group relative">
+                <div class="composer-glow absolute inset-0 rounded-2xl bg-primary-fixed-dim/5 blur-md transition-all group-focus-within:bg-primary-fixed-dim/10"></div>
+                <div
+                  class="composer-input-wrap relative flex items-end rounded-2xl border p-2 transition-all"
+                >
+                  <label class="sr-only" for="question-input">Message</label>
+                  <textarea
+                    id="question-input"
+                    name="query"
+                    rows="1"
+                    maxlength="4000"
+                    autocomplete="off"
+                    required
+                    placeholder="Type your query here…"
+                    class="max-h-40 min-h-[48px] flex-1 resize-none border-0 bg-transparent px-4 py-3 text-base text-on-surface placeholder:text-outline focus:ring-0 lg:text-lg"
+                  ></textarea>
+                  <button
+                    type="submit"
+                    id="submit-btn"
+                    class="mb-0.5 rounded-xl bg-primary-fixed-dim p-3 text-on-primary-fixed shadow-lg transition-all hover:bg-surface-tint active:scale-95 dark:shadow-lg"
+                    aria-label="Send message"
+                  >
+                    <span class="material-symbols-outlined text-xl dark:hidden max-lg:inline" aria-hidden="true">arrow_upward</span>
+                    <span class="material-symbols-outlined hidden text-xl lg:inline dark:!hidden" aria-hidden="true">send</span>
+                    <svg class="hidden h-6 w-6 rotate-90 dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+                <p class="mb-0 text-center text-[10px] font-bold uppercase tracking-[0.1em] text-outline lg:text-[11px]">
+                  No PAN, Aadhaar, bank details, or OTPs.
+                </p>
+                <span id="status" class="text-center font-mono text-[10px] text-on-surface-variant sm:text-right" aria-live="polite"></span>
+              </div>
+              <div class="flex justify-between text-[9px] font-medium uppercase tracking-wider text-outline-variant">
+                <span>Groww scheme citations only</span>
+                <span>pilot</span>
+              </div>
+            </form>
+          </div>
+        </footer>
+      </main>
+    </div>
+
+    <div
+      id="corpus-mobile-backdrop"
+      class="fixed inset-0 z-[60] hidden bg-black/60 lg:hidden"
+      aria-hidden="true"
+    ></div>
+    <div
+      id="corpus-mobile-sheet"
+      class="fixed bottom-0 left-0 right-0 z-[70] max-h-[78vh] overflow-hidden rounded-t-2xl border-t border-outline-variant bg-surface-container shadow-[0_-8px_32px_rgba(0,0,0,0.45)] lg:hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="corpus-mobile-title"
+      hidden
+    >
+      <div class="flex items-center justify-between border-b border-outline-variant/80 px-4 py-3">
+        <h2 id="corpus-mobile-title" class="font-mono text-sm font-bold text-on-surface">Pilot corpus on Groww</h2>
+        <button
+          type="button"
+          id="corpus-mobile-close"
+          class="rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container-high"
+          aria-label="Close fund list"
+        >
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <ul id="corpus-fund-list-mobile" class="max-h-[min(60vh,28rem)] list-none overflow-y-auto px-4 py-3"></ul>
+    </div>
+
+    <template id="chat-welcome-template">
+      <div id="chat-welcome" class="flex animate-fade-in items-start gap-3">
+        <div class="chat-avatar-assistant flex h-8 w-8 shrink-0 items-center justify-center">
+          <span class="material-symbols-outlined filled" aria-hidden="true">smart_toy</span>
+        </div>
+        <div class="assistant-bubble-shell chat-assistant-bubble flex-1 border p-4 lg:p-6">
+          <p class="body-md leading-relaxed text-on-surface">
+            Hi — I’m a <strong class="font-semibold text-on-surface">facts-only</strong> assistant for the HDFC schemes in this pilot. Ask about NAV,
+            fees, SIP minimums, and similar details; I’ll answer from retrieved Groww pages. I don’t give advice or predictions.
+          </p>
+          <div class="mt-4 border-t border-outline-variant/50 pt-4">
+            <p class="flex items-center gap-2 text-sm italic text-on-surface-variant">
+              <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Tip: name the fund in your message, or pick one from the corpus list in the sidebar.
+            </p>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <script src="phase6-api-origin.js" defer></script>
+    <script src="app.js" defer></script>
+  </body>
+</html>
