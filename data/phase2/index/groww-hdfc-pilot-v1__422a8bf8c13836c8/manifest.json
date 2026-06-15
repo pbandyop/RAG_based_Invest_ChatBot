@@ -1,15 +1,15 @@
 {
   "phase": "P2",
-  "built_at_utc": "2026-06-14T13:06:02.182208+00:00",
+  "built_at_utc": "2026-06-15T16:24:39.616258+00:00",
   "embedding_model": "BAAI/bge-small-en-v1.5",
   "max_chunk_tokens": 480,
   "overlap_tokens": 80,
   "min_chunk_chars": 32,
   "normalized_source_dir": "/home/runner/work/RAG_based_Invest_ChatBot/RAG_based_Invest_ChatBot/data/phase1/normalized/groww-hdfc-pilot-v1__422a8bf8c13836c8",
   "index_out_dir": "/home/runner/work/RAG_based_Invest_ChatBot/RAG_based_Invest_ChatBot/data/phase2/index/groww-hdfc-pilot-v1__422a8bf8c13836c8",
-  "chunk_count": 1683,
+  "chunk_count": 1681,
   "vector_dim": 384,
   "faiss_index_type": "IndexFlatIP",
   "embedding_normalize": true,
-  "chunk_fingerprint_sha256": "2b8a9d91557da3930146dde7b4c9b7961c33bfbf307998efa1785b8a282ac6bb"
+  "chunk_fingerprint_sha256": "112f980f13a68cc70a95f3c0191673b109600d5e85caa7fa210c68f023c377c9"
 }
