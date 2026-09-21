@@ -1,6 +1,6 @@
 {
   "phase": "P2",
-  "built_at_utc": "2026-09-20T14:35:23.475851+00:00",
+  "built_at_utc": "2026-09-21T16:50:53.579411+00:00",
   "embedding_model": "BAAI/bge-small-en-v1.5",
   "max_chunk_tokens": 480,
   "overlap_tokens": 80,
