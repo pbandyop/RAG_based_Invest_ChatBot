@@ -1,6 +1,6 @@
 {
   "phase": "P2",
-  "built_at_utc": "2026-09-24T15:45:36.527760+00:00",
+  "built_at_utc": "2026-09-25T15:46:31.642505+00:00",
   "embedding_model": "BAAI/bge-small-en-v1.5",
   "max_chunk_tokens": 480,
   "overlap_tokens": 80,
@@ -11,5 +11,5 @@
   "vector_dim": 384,
   "faiss_index_type": "IndexFlatIP",
   "embedding_normalize": true,
-  "chunk_fingerprint_sha256": "a8205a98724a4f4b0ca5fbaa426570b30ded13cde85876e68f575cf1cb22339a"
+  "chunk_fingerprint_sha256": "7d75f461304fcffa243ba25127b724dd1ab4ada23cdcc29404dcb1da668496c2"
 }
